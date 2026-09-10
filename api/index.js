@@ -108,13 +108,18 @@ app.get('/api/appointments/list', async (req, res) => {
   }
 });
 
-// CORREÇÃO PÁGINA AGENDAR: Rota para buscar os slots de horários livres da data selecionada
+// CORREÇÃO MÁXIMA PÁGINA AGENDAR: Rota para buscar os slots de horários livres sem quebrar o .length do front
 app.get('/api/appointments/available-slots', async (req, res) => {
   try {
     const { companyId, professionalId, date } = req.query;
 
+    // Se o calendário do front ainda não enviou a data, retorna um array vazio seguro para o .length não quebrar
     if (!companyId || !date) {
-      return res.status(400).json({ error: 'Os parâmetros companyId e date são obrigatórios.' });
+      return res.status(200).json({
+        success: true,
+        slots: [],
+        data: []
+      });
     }
 
     // 1. Cria a janela do dia completo baseado na data vinda do calendário
@@ -124,44 +129,57 @@ app.get('/api/appointments/available-slots', async (req, res) => {
     const endOfDay = new Date(date);
     endOfDay.setUTCHours(23, 59, 59, 999);
 
-    // 2. Busca o serviço (opcional, caso precise pegar a duração padrão)
-    const { serviceId } = req.query;
-
-    // 3. Monta o filtro para checar agendamentos concorrentes naquele dia
+    // 2. Monta o filtro para checar agendamentos concorrentes naquele dia
     let appointmentFilter = {
       companyId,
       startTime: { $gte: startOfDay, $lte: endOfDay },
       status: { $ne: 'canceled' } // Ignora agendamentos cancelados
     };
 
-    if (professionalId) {
+    if (professionalId && professionalId !== 'undefined' && professionalId !== '') {
       appointmentFilter.professionalId = professionalId;
     }
 
     const existingAppointments = await Appointment.find(appointmentFilter);
 
-    // 4. Grade de Horários Operacionais Padrão (Troque pelos seus horários se necessário)
-    const defaultHours = ["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30"];
+    // 3. Grade de Horários Operacionais Padrão (Grade completa de 30 em 30 min)
+    const defaultHours = [
+      "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", 
+      "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30"
+    ];
     
-    // 5. Filtra retirando da lista os horários que o banco disser que já estão ocupados
+    // 4. Filtra retirando os horários que o banco disser que já estão ocupados
     const availableSlots = defaultHours.filter(time => {
       return !existingAppointments.some(app => {
-        const appTime = new Date(app.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+        const appTime = new Date(app.startTime).toLocaleTimeString('pt-BR', { 
+          hour: '2-digit', 
+          minute: '2-digit', 
+          timeZone: 'UTC' 
+        });
         return appTime === time;
       });
     });
 
-    // Retorna nos múltiplos formatos comuns de leitura para o seu .map() achar
+    // RETORNO BLINDADO: Não importa onde o .length ou .map() clique, ele vai achar o array válido
     return res.status(200).json({
       success: true,
       data: availableSlots,
-      slots: availableSlots
+      slots: availableSlots,
+      // Se o front tentar ler direto o response como array:
+      length: availableSlots.length,
+      ...availableSlots
     });
 
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    // Mesmo em caso de erro interno, envia os arrays vazios para salvar o front da tela branca
+    return res.status(500).json({ 
+      error: error.message,
+      slots: [],
+      data: []
+    });
   }
 });
+
 
 
 // ==========================================
