@@ -64,11 +64,12 @@ export default async function handler(req, res) {
     // ROTA: GET /api/companies/get-by-slug?slug=valor
     // ----------------------------------------------------
         // ----------------------------------------------------
-    // ROTA: GET /api/companies/get-by-slug?slug=valor
+        // ----------------------------------------------------
+    // ROTA: GET /api/companies/get-by-slug
     // ----------------------------------------------------
     if (req.method === 'GET' && currentAction === 'get-by-slug') {
-      // Garante a captura do slug mesmo que ele venha misturado no objeto de query
-      const slug = req.query.slug || req.body.slug;
+      // Garante que o slug seja pego corretamente, ignorando o array 'action'
+      const slug = req.query.slug;
 
       if (!slug) {
         return res.status(400).json({ error: 'O parâmetro slug é obrigatório.' });
@@ -80,8 +81,17 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'Estabelecimento não encontrado.' });
       }
 
-      return res.status(200).json({ success: true, company });
+      // Retorna exatamente a estrutura que o seu frontend antigo esperava
+      return res.status(200).json({ 
+        success: true, 
+        company: company,
+        // Caso o front busque direto na raiz do objeto por segurança:
+        _id: company._id,
+        name: company.name,
+        slug: company.slug
+      });
     }
+
 
     // Se bater em qualquer outro método ou rota inexistente dentro de /companies
     return res.status(404).json({ error: 'Rota não encontrada.' });
