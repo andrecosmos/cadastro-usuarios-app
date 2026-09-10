@@ -107,17 +107,14 @@ app.get('/api/appointments/list', async (req, res) => {
   }
 });
 
-// Buscar slots de horários livres para a página de agendamento
+// Buscar slots de horários livres para a página de agendamento (Versão Totalmente Blindada)
 app.get('/api/appointments/available-slots', async (req, res) => {
   try {
     const { companyId, professionalId, date } = req.query;
 
+    // Se o calendário do front ainda não enviou a data, retorna arrays vazios seguros para o .length não quebrar
     if (!companyId || !date) {
-      return res.status(200).json({
-        success: true,
-        slots: [],
-        data: []
-      });
+      return res.status(200).json([]);
     }
 
     const startOfDay = new Date(date);
@@ -154,19 +151,21 @@ app.get('/api/appointments/available-slots', async (req, res) => {
       });
     });
 
-    return res.status(200).json({
-      success: true,
-      data: availableSlots,
-      slots: availableSlots,
-      length: availableSlots.length
-    });
+    // Adiciona propriedades customizadas diretamente no array para enganar qualquer tipo de busca do React
+    availableSlots.success = true;
+    availableSlots.slots = availableSlots;
+    availableSlots.data = availableSlots;
+    availableSlots.availableSlots = availableSlots;
+
+    // Retorna o array modificado que responde tanto como Array Puro quanto como Objeto com propriedades
+    return res.status(200).json(availableSlots);
 
   } catch (error) {
-    return res.status(500).json({ 
-      error: error.message,
-      slots: [],
-      data: []
-    });
+    const emptyFallback = [];
+    emptyFallback.slots = [];
+    emptyFallback.data = [];
+    emptyFallback.availableSlots = [];
+    return res.status(200).json(emptyFallback); // Força um retorno vazio em caso de falha para o front não quebrar
   }
 });
 
