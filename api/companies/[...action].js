@@ -17,9 +17,17 @@ function generateSlug(text) {
 export default async function handler(req, res) {
   await connectToDatabase();
 
-  // O Vercel extrai os parâmetros da URL em um array através do destruct do req.query
-  const { action } = req.query; 
-  const currentAction = action ? action[0] : null;
+  const { action, ...restOfQuery } = req.query;
+  
+  // Garante que transformamos o array ['get-by-slug'] na string "get-by-slug"
+  const currentAction = Array.isArray(action) ? action : action;
+
+  // CÓDIGO TEMPORÁRIO DE DIAGNÓSTICO: Olhe o terminal do seu 'vercel dev' quando rodar!
+  console.log('--- NOVA REQUISIÇÃO ---');
+  console.log('Método:', req.method);
+  console.log('Ação detectada:', currentAction);
+  console.log('Parâmetros restantes da URL:', restOfQuery);
+
 
   try {
     // ----------------------------------------------------
@@ -55,8 +63,12 @@ export default async function handler(req, res) {
     // ----------------------------------------------------
     // ROTA: GET /api/companies/get-by-slug?slug=valor
     // ----------------------------------------------------
+        // ----------------------------------------------------
+    // ROTA: GET /api/companies/get-by-slug?slug=valor
+    // ----------------------------------------------------
     if (req.method === 'GET' && currentAction === 'get-by-slug') {
-      const { slug } = req.query;
+      // Garante a captura do slug mesmo que ele venha misturado no objeto de query
+      const slug = req.query.slug || req.body.slug;
 
       if (!slug) {
         return res.status(400).json({ error: 'O parâmetro slug é obrigatório.' });

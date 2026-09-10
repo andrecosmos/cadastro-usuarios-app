@@ -8,9 +8,11 @@ import { Company } from '../_models/Company.js';
 export default async function handler(req, res) {
   await connectToDatabase();
 
-  const { action } = req.query;
-  // Como action é um array, pegamos a primeira posição (ex: 'create', 'list')
-  const currentAction = action && action.length > 0 ? action[0] : null;
+  const { action, ...restOfQuery } = req.query;
+  
+  // Garante que transformamos o array ['get-by-slug'] na string "get-by-slug"
+  const currentAction = Array.isArray(action) ? action : action;
+
 
   try {
     // ----------------------------------------------------

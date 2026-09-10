@@ -4,9 +4,17 @@ import { Staff } from '../_models/Staff.js';
 export default async function handler(req, res) {
   await connectToDatabase();
 
-  const { action } = req.query;
-  // Captura a ação vinda da URL (ex: 'create-user' ou 'get-users')
-  const currentAction = action && action.length > 0 ? action[0] : null;
+  const { action, ...restOfQuery } = req.query;
+  
+  // Garante que transformamos o array ['get-by-slug'] na string "get-by-slug"
+  const currentAction = Array.isArray(action) ? action : action;
+
+  // CÓDIGO TEMPORÁRIO DE DIAGNÓSTICO: Olhe o terminal do seu 'vercel dev' quando rodar!
+  console.log('--- NOVA REQUISIÇÃO ---');
+  console.log('Método:', req.method);
+  console.log('Ação detectada:', currentAction);
+  console.log('Parâmetros restantes da URL:', restOfQuery);
+
 
   try {
     // ----------------------------------------------------

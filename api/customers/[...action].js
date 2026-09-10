@@ -5,8 +5,17 @@ import { Customer } from '../_models/Customer.js';
 export default async function handler(req, res) {
   await connectToDatabase();
 
-  const { action } = req.query;
-  const currentAction = action ? action[0] : null;
+  const { action, ...restOfQuery } = req.query;
+  
+  // Garante que transformamos o array ['get-by-slug'] na string "get-by-slug"
+  const currentAction = Array.isArray(action) ? action : action;
+
+  // CÓDIGO TEMPORÁRIO DE DIAGNÓSTICO: Olhe o terminal do seu 'vercel dev' quando rodar!
+  console.log('--- NOVA REQUISIÇÃO ---');
+  console.log('Método:', req.method);
+  console.log('Ação detectada:', currentAction);
+  console.log('Parâmetros restantes da URL:', restOfQuery);
+
 
   try {
     // ----------------------------------------------------
