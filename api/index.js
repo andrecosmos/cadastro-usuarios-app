@@ -85,5 +85,72 @@ app.get('/api/appointments/list', async (req, res) => {
   }
 });
 
-// Exporta o aplicativo Express preparado para a Vercel
+// NOVA ROTA: Atualizar status do agendamento (Concluir e Cancelar)
+// Suporta tanto PUT quanto PATCH se o seu front usar um ou outro
+const handleUpdateStatus = async (req, res) => {
+  try {
+    const { appointmentId, status } = req.body;
+    if (!appointmentId || !status) return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
+
+    const updated = await Appointment.findByIdAndUpdate(
+      appointmentId,
+      { status },
+      { new: true }
+    );
+
+    if (!updated) return res.status(404).json({ error: 'Agendamento não encontrado.' });
+    return res.status(200).json({ success: true, data: updated });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+app.put('/api/appointments/update-status', handleUpdateStatus);
+app.patch('/api/appointments/update-status', handleUpdateStatus);
+
+
+// ==========================================
+// ROTAS DE EQUIPE (STAFF)
+// ==========================================
+// NOVA ROTA: Listar profissionais requisitada pelo seu frontend
+app.get('/api/staff/list-by-company', async (req, res) => {
+  try {
+    const { companyId } = req.query;
+    if (!companyId) return res.status(400).json({ error: 'O parâmetro companyId é obrigatório.' });
+
+    const staffList = await Staff.find({ companyId, isActive: true }).populate('specialties');
+    return res.status(200).json({ success: true, data: staffList });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// NOVA ROTA: Caso seu front chame alternativamente por 'get-users'
+app.get('/api/staff/get-users', async (req, res) => {
+  try {
+    const { companyId } = req.query;
+    if (!companyId) return res.status(400).json({ error: 'O parâmetro companyId é obrigatório.' });
+    const staffList = await Staff.find({ companyId, isActive: true }).populate('specialties');
+    return res.status(200).json({ success: true, data: staffList });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+
+// ==========================================
+// ROTAS DE SERVIÇOS (SERVICES)
+// ==========================================
+// NOVA ROTA: Listar serviços requisitada pelo seu frontend
+app.get('/api/services/list-by-company', async (req, res) => {
+  try {
+    const { companyId } = req.query;
+    if (!companyId) return res.status(400).json({ error: 'O parâmetro companyId é obrigatório.' });
+
+    const services = await Service.find({ companyId, isActive: true });
+    return res.status(200).json({ success: true, data: services });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 export default app;
