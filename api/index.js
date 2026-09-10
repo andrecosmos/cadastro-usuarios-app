@@ -74,45 +74,14 @@ app.post('/api/customers/create', async (req, res) => {
 // ==========================================
 // ROTAS DE AGENDAMENTOS (APPOINTMENTS)
 // ==========================================
-
-// Listar agendamentos com filtro por data para o Admin
-app.get('/api/appointments/list', async (req, res) => {
-  try {
-    const { companyId, date } = req.query;
-    if (!companyId) return res.status(400).json({ error: 'O parâmetro companyId é obrigatório.' });
-
-    let queryFilter = { companyId };
-
-    if (date) {
-      const startOfDay = new Date(date);
-      startOfDay.setUTCHours(0, 0, 0, 0);
-
-      const endOfDay = new Date(date);
-      endOfDay.setUTCHours(23, 59, 59, 999);
-
-      queryFilter.startTime = {
-        $gte: startOfDay,
-        $lte: endOfDay
-      };
-    }
-
-    const appointments = await Appointment.find(queryFilter)
-      .populate('customerId')
-      .populate('serviceId')
-      .populate('professionalId');
-
-    return res.status(200).json({ success: true, data: appointments });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-});
-
-// Buscar slots de horários livres para a página de agendamento (Versão Totalmente Blindada)
+// Buscar slots de horários livres para a página de agendamento
 app.get('/api/appointments/available-slots', async (req, res) => {
   try {
+    // ADICIONE ESTA LINHA AQUI: Obriga o navegador a sempre buscar dados novos no servidor
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+
     const { companyId, professionalId, date } = req.query;
 
-    // Se o calendário do front ainda não enviou a data, retorna arrays vazios seguros para o .length não quebrar
     if (!companyId || !date) {
       return res.status(200).json([]);
     }
@@ -151,23 +120,14 @@ app.get('/api/appointments/available-slots', async (req, res) => {
       });
     });
 
-    // Adiciona propriedades customizadas diretamente no array para enganar qualquer tipo de busca do React
-    availableSlots.success = true;
-    availableSlots.slots = availableSlots;
-    availableSlots.data = availableSlots;
-    availableSlots.availableSlots = availableSlots;
-
-    // Retorna o array modificado que responde tanto como Array Puro quanto como Objeto com propriedades
+    // Retorna a lista pura como array para o .length do React ler perfeitamente
     return res.status(200).json(availableSlots);
 
   } catch (error) {
-    const emptyFallback = [];
-    emptyFallback.slots = [];
-    emptyFallback.data = [];
-    emptyFallback.availableSlots = [];
-    return res.status(200).json(emptyFallback); // Força um retorno vazio em caso de falha para o front não quebrar
+    return res.status(200).json([]); // Evita quebrar o .length caso o banco falhe
   }
 });
+
 
 // Atualizar status do agendamento (Botões Concluir e Cancelar do Admin)
 const handleUpdateStatus = async (req, res) => {
