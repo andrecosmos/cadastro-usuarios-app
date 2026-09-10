@@ -51,20 +51,42 @@ export default async function handler(req, res) {
     // ----------------------------------------------------
     // ROTA: GET /api/appointments/list
     // ----------------------------------------------------
+        // ----------------------------------------------------
+    // ROTA: GET /api/appointments/list
+    // ----------------------------------------------------
     if (req.method === 'GET' && currentAction === 'list') {
-      const { companyId } = req.query;
+      const { companyId, date } = req.query; // Recebe a data enviada pelo front (ex: 2026-09-10)
 
       if (!companyId) {
         return res.status(400).json({ error: 'O parâmetro companyId é obrigatório.' });
       }
 
-      const appointments = await Appointment.find({ companyId })
+      // Cria um filtro de busca básico
+      let queryFilter = { companyId };
+
+      // Se o frontend enviou uma data específica, faz o ajuste de fuso horário
+      if (date) {
+        const startOfDay = new Date(date);
+        startOfDay.setUTCHours(0, 0, 0, 0); // Força o início do dia em UTC
+
+        const endOfDay = new Date(date);
+        endOfDay.setUTCHours(23, 59, 59, 999); // Força o fim do dia em UTC
+
+        // Filtra agendamentos que estejam estritamente dentro deste dia completo
+        queryFilter.startTime = {
+          $gte: startOfDay,
+          $lte: endOfDay
+        };
+      }
+
+      const appointments = await Appointment.find(queryFilter)
         .populate('customerId')
         .populate('serviceId')
         .populate('professionalId');
 
       return res.status(200).json({ success: true, data: appointments });
     }
+
 
     // ----------------------------------------------------
     // ROTA: GET /api/appointments/available-slots
