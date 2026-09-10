@@ -7,27 +7,20 @@ function generateSlug(text) {
     .toString()
     .toLowerCase()
     .trim()
-    .normalize('NFD')
+    .normalize('NFD') // Remove acentos
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9 -]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
+    .replace(/[^a-z0-9 -]/g, '') // Remove caracteres especiais
+    .replace(/\s+/g, '-') // Substitui espaços por hífen
+    .replace(/-+/g, '-'); // Remove múltiplos hifens
 }
 
 export default async function handler(req, res) {
   await connectToDatabase();
 
-  const { action, ...restOfQuery } = req.query;
+  const { action } = req.query;
   
-  // Garante que transformamos o array ['get-by-slug'] na string "get-by-slug"
-  const currentAction = Array.isArray(action) ? action : action;
-
-  // CÓDIGO TEMPORÁRIO DE DIAGNÓSTICO: Olhe o terminal do seu 'vercel dev' quando rodar!
-  console.log('--- NOVA REQUISIÇÃO ---');
-  console.log('Método:', req.method);
-  console.log('Ação detectada:', currentAction);
-  console.log('Parâmetros restantes da URL:', restOfQuery);
-
+  // CORREÇÃO CRUCIAL: Extrai a string pura se a Vercel mandar como Array
+  const currentAction = Array.isArray(action) ? action[0] : action;
 
   try {
     // ----------------------------------------------------
@@ -61,24 +54,17 @@ export default async function handler(req, res) {
     }
 
     // ----------------------------------------------------
-    // ROTA: GET /api/companies/get-by-slug?slug=valor
-    // ----------------------------------------------------
-        // ----------------------------------------------------
-        // ----------------------------------------------------
-        // ----------------------------------------------------
     // ROTA: GET /api/companies/get-by-slug
     // ----------------------------------------------------
-    if (req.method === 'GET' && currentAction === 'get-by-slug') {
-      
-      // SOLUÇÃO REAL: Extrai os parâmetros direto da URL bruta da requisição
-      const urlSearchParams = new URLSearchParams(req.url.split('?')[1]);
-      const slug = urlSearchParams.get('slug');
+    if (req.method === 'GET' && currentAction === 'get-by-slug') { 
+      // Extrai os parâmetros direto da URL bruta da requisição para blindar contra a Vercel
+      const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+      const slug = parsedUrl.searchParams.get('slug');
 
       if (!slug) {
         return res.status(400).json({ error: 'O parâmetro slug é obrigatório.' });
       }
 
-      // Executa a busca no MongoDB com o texto puro extraído
       const company = await Company.findOne({ slug });
 
       if (!company) {
@@ -88,10 +74,8 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, company });
     }
 
-
-
-    // Se bater em qualquer outro método ou rota inexistente dentro de /companies
-    return res.status(404).json({ error: 'Rota não encontrada.' });
+    // Se bater em qualquer outra rota inexistente dentro de /companies
+    return res.status(404).json({ error: `Rota não encontrada. Ação: ${currentAction}` });
 
   } catch (error) {
     return res.status(500).json({ error: 'Erro interno no servidor: ' + error.message });

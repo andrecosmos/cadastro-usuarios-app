@@ -55,7 +55,11 @@ export default async function handler(req, res) {
     // ROTA: GET /api/appointments/list
     // ----------------------------------------------------
     if (req.method === 'GET' && currentAction === 'list') {
-      const { companyId, date } = req.query; // Recebe a data enviada pelo front (ex: 2026-09-10)
+      
+      const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+      const companyId = parsedUrl.searchParams.get('companyId');
+      const date = parsedUrl.searchParams.get('date');
+
 
       if (!companyId) {
         return res.status(400).json({ error: 'O parâmetro companyId é obrigatório.' });

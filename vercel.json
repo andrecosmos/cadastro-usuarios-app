@@ -6,10 +6,6 @@
     { "source": "/api/appointments/:action*", "destination": "/api/appointments/[...action].js" },
     { "source": "/api/services/:action*", "destination": "/api/services/[...action].js" },
     { "source": "/api/staff/:action*", "destination": "/api/staff/[...action].js" }
-  ],
-  "functions": {
-    "api/**/[...action].js": {
-      "maxDuration": 10
-    }
-  }
+  ]
 }
+

@@ -9,19 +9,15 @@ export default async function handler(req, res) {
   // Garante que transformamos o array ['get-by-slug'] na string "get-by-slug"
   const currentAction = Array.isArray(action) ? action : action;
 
-  // CÓDIGO TEMPORÁRIO DE DIAGNÓSTICO: Olhe o terminal do seu 'vercel dev' quando rodar!
-  console.log('--- NOVA REQUISIÇÃO ---');
-  console.log('Método:', req.method);
-  console.log('Ação detectada:', currentAction);
-  console.log('Parâmetros restantes da URL:', restOfQuery);
-
-
   try {
     // ----------------------------------------------------
     // ROTA: POST /api/staff/create-user
     // ----------------------------------------------------
     if (req.method === 'POST' && currentAction === 'create-user') {
-      const { companyId, name, email, specialties } = req.body;
+     
+      const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+      const companyId = parsedUrl.searchParams.get('companyId');
+
 
       if (!companyId || !name) {
         return res.status(400).json({ error: 'Os campos companyId e name são obrigatórios.' });
