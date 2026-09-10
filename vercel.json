@@ -5,7 +5,8 @@
     { "source": "/api/customers/:action*", "destination": "/api/customers/[...action].js" },
     { "source": "/api/appointments/:action*", "destination": "/api/appointments/[...action].js" },
     { "source": "/api/services/:action*", "destination": "/api/services/[...action].js" },
-    { "source": "/api/staff/:action*", "destination": "/api/staff/[...action].js" }
+    { "source": "/api/staff/:action*", "destination": "/api/staff/[...action].js" },
+    { "source": "/((?!api).*)" }
   ]
 }
 
