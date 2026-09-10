@@ -65,32 +65,29 @@ export default async function handler(req, res) {
     // ----------------------------------------------------
         // ----------------------------------------------------
         // ----------------------------------------------------
+        // ----------------------------------------------------
     // ROTA: GET /api/companies/get-by-slug
     // ----------------------------------------------------
     if (req.method === 'GET' && currentAction === 'get-by-slug') {
-      // Garante que o slug seja pego corretamente, ignorando o array 'action'
-      const slug = req.query.slug;
+      
+      // SOLUÇÃO REAL: Extrai os parâmetros direto da URL bruta da requisição
+      const urlSearchParams = new URLSearchParams(req.url.split('?')[1]);
+      const slug = urlSearchParams.get('slug');
 
       if (!slug) {
         return res.status(400).json({ error: 'O parâmetro slug é obrigatório.' });
       }
 
+      // Executa a busca no MongoDB com o texto puro extraído
       const company = await Company.findOne({ slug });
 
       if (!company) {
         return res.status(404).json({ error: 'Estabelecimento não encontrado.' });
       }
 
-      // Retorna exatamente a estrutura que o seu frontend antigo esperava
-      return res.status(200).json({ 
-        success: true, 
-        company: company,
-        // Caso o front busque direto na raiz do objeto por segurança:
-        _id: company._id,
-        name: company.name,
-        slug: company.slug
-      });
+      return res.status(200).json({ success: true, company });
     }
+
 
 
     // Se bater em qualquer outro método ou rota inexistente dentro de /companies
