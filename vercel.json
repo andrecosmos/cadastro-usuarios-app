@@ -1,9 +1,15 @@
 
 {
-  "framework": "vite",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+    { "source": "/api/companies/:action*", "destination": "/api/companies/[...action].js" },
+    { "source": "/api/customers/:action*", "destination": "/api/customers/[...action].js" },
+    { "source": "/api/appointments/:action*", "destination": "/api/appointments/[...action].js" },
+    { "source": "/api/services/:action*", "destination": "/api/services/[...action].js" },
+    { "source": "/api/staff/:action*", "destination": "/api/staff/[...action].js" }
+  ],
+  "functions": {
+    "api/**/[...action].js": {
+      "maxDuration": 10
+    }
+  }
 }
-
