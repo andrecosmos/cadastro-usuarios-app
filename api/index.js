@@ -192,20 +192,30 @@ app.patch('/api/appointments/update-status', handleUpdateStatus);
 
 
 // ==========================================
-// ROTAS DE EQUIPE (STAFF)
+// ROTAS DE EQUIPE (STAFF) - VERSÃO HIPER BLINDADA
 // ==========================================
 app.get('/api/staff/list-by-company', async (req, res) => {
   try {
     const { companyId } = req.query;
     if (!companyId) return res.status(400).json({ error: 'O parâmetro companyId é obrigatório.' });
 
-    const staffList = await Staff.find({ companyId, isActive: true }).populate('specialties');
+    const staffList = await Staff.find({ companyId, isActive: true }).populate('specialties').lean();
     
+    // Varre a lista tratando cada item para garantir que nenhuma propriedade de array falte ao React
+    const treatedStaff = staffList.map(member => ({
+      ...member,
+      _id: member._id ? member._id.toString() : "",
+      companyId: member.companyId ? member.companyId.toString() : "",
+      // Garante de forma absoluta que specialties seja um array válido com propriedade .length sempre disponível
+      specialties: Array.isArray(member.specialties) ? member.specialties.map(s => typeof s === 'object' && s !== null ? { ...s, _id: s._id ? s._id.toString() : "" } : s) : [],
+      services: Array.isArray(member.specialties) ? member.specialties : [] // Se o seu front ler .services no lugar de specialties
+    }));
+
     return res.status(200).json({ 
       success: true, 
-      data: staffList,
-      staff: staffList,
-      staffList: staffList
+      data: treatedStaff,
+      staff: treatedStaff,
+      staffList: treatedStaff
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -217,11 +227,18 @@ app.get('/api/staff/get-users', async (req, res) => {
     const { companyId } = req.query;
     if (!companyId) return res.status(400).json({ error: 'O parâmetro companyId é obrigatório.' });
 
-    const staffList = await Staff.find({ companyId, isActive: true }).populate('specialties');
+    const staffList = await Staff.find({ companyId, isActive: true }).populate('specialties').lean();
+    const treatedStaff = staffList.map(member => ({
+      ...member,
+      _id: member._id ? member._id.toString() : "",
+      specialties: Array.isArray(member.specialties) ? member.specialties : [],
+      services: Array.isArray(member.specialties) ? member.specialties : []
+    }));
+
     return res.status(200).json({ 
       success: true, 
-      data: staffList,
-      staff: staffList
+      data: treatedStaff,
+      staff: treatedStaff
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -230,23 +247,29 @@ app.get('/api/staff/get-users', async (req, res) => {
 
 
 // ==========================================
-// ROTAS DE SERVIÇOS (SERVICES)
+// ROTAS DE SERVIÇOS (SERVICES) - VERSÃO HIPER BLINDADA
 // ==========================================
 app.get('/api/services/list-by-company', async (req, res) => {
   try {
     const { companyId } = req.query;
     if (!companyId) return res.status(400).json({ error: 'O parâmetro companyId é obrigatório.' });
 
-    const services = await Service.find({ companyId, isActive: true });
+    const services = await Service.find({ companyId, isActive: true }).lean();
+    
+    const treatedServices = services.map(service => ({
+      ...service,
+      _id: service._id ? service._id.toString() : ""
+    }));
     
     return res.status(200).json({ 
       success: true, 
-      data: services,
-      services: services
+      data: treatedServices,
+      services: treatedServices
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 });
+
 
 export default app;
