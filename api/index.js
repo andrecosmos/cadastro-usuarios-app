@@ -74,38 +74,94 @@ app.post('/api/customers/create', async (req, res) => {
 // ==========================================
 // ROTAS DE AGENDAMENTOS (APPOINTMENTS)
 // ==========================================
+
+// CORREÇÃO ADMIN: Agora filtra estritamente por data se ela for enviada na URL
 app.get('/api/appointments/list', async (req, res) => {
   try {
-    const { companyId } = req.query;
+    const { companyId, date } = req.query; // Pega o companyId e a data (ex: 2026-09-10)
     if (!companyId) return res.status(400).json({ error: 'O parâmetro companyId é obrigatório.' });
-    const appointments = await Appointment.find({ companyId }).populate('customerId').populate('serviceId').populate('professionalId');
+
+    let queryFilter = { companyId };
+
+    // Se o admin clicou em uma data específica, criamos o filtro do dia completo (UTC)
+    if (date) {
+      const startOfDay = new Date(date);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+
+      const endOfDay = new Date(date);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+
+      queryFilter.startTime = {
+        $gte: startOfDay,
+        $lte: endOfDay
+      };
+    }
+
+    const appointments = await Appointment.find(queryFilter)
+      .populate('customerId')
+      .populate('serviceId')
+      .populate('professionalId');
+
     return res.status(200).json({ success: true, data: appointments });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 });
 
-// NOVA ROTA: Atualizar status do agendamento (Concluir e Cancelar)
-// Suporta tanto PUT quanto PATCH se o seu front usar um ou outro
-const handleUpdateStatus = async (req, res) => {
+// CORREÇÃO PÁGINA AGENDAR: Rota para buscar os slots de horários livres da data selecionada
+app.get('/api/appointments/available-slots', async (req, res) => {
   try {
-    const { appointmentId, status } = req.body;
-    if (!appointmentId || !status) return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
+    const { companyId, professionalId, date } = req.query;
 
-    const updated = await Appointment.findByIdAndUpdate(
-      appointmentId,
-      { status },
-      { new: true }
-    );
+    if (!companyId || !date) {
+      return res.status(400).json({ error: 'Os parâmetros companyId e date são obrigatórios.' });
+    }
 
-    if (!updated) return res.status(404).json({ error: 'Agendamento não encontrado.' });
-    return res.status(200).json({ success: true, data: updated });
+    // 1. Cria a janela do dia completo baseado na data vinda do calendário
+    const startOfDay = new Date(date);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(date);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
+    // 2. Busca o serviço (opcional, caso precise pegar a duração padrão)
+    const { serviceId } = req.query;
+
+    // 3. Monta o filtro para checar agendamentos concorrentes naquele dia
+    let appointmentFilter = {
+      companyId,
+      startTime: { $gte: startOfDay, $lte: endOfDay },
+      status: { $ne: 'canceled' } // Ignora agendamentos cancelados
+    };
+
+    if (professionalId) {
+      appointmentFilter.professionalId = professionalId;
+    }
+
+    const existingAppointments = await Appointment.find(appointmentFilter);
+
+    // 4. Grade de Horários Operacionais Padrão (Troque pelos seus horários se necessário)
+    const defaultHours = ["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30"];
+    
+    // 5. Filtra retirando da lista os horários que o banco disser que já estão ocupados
+    const availableSlots = defaultHours.filter(time => {
+      return !existingAppointments.some(app => {
+        const appTime = new Date(app.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+        return appTime === time;
+      });
+    });
+
+    // Retorna nos múltiplos formatos comuns de leitura para o seu .map() achar
+    return res.status(200).json({
+      success: true,
+      data: availableSlots,
+      slots: availableSlots
+    });
+
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
-};
-app.put('/api/appointments/update-status', handleUpdateStatus);
-app.patch('/api/appointments/update-status', handleUpdateStatus);
+});
 
 
 // ==========================================
