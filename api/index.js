@@ -111,26 +111,36 @@ app.patch('/api/appointments/update-status', handleUpdateStatus);
 // ==========================================
 // ROTAS DE EQUIPE (STAFF)
 // ==========================================
-// NOVA ROTA: Listar profissionais requisitada pelo seu frontend
 app.get('/api/staff/list-by-company', async (req, res) => {
   try {
     const { companyId } = req.query;
     if (!companyId) return res.status(400).json({ error: 'O parâmetro companyId é obrigatório.' });
 
     const staffList = await Staff.find({ companyId, isActive: true }).populate('specialties');
-    return res.status(200).json({ success: true, data: staffList });
+    
+    // Retorna em múltiplos formatos para garantir compatibilidade com o .map() do front
+    return res.status(200).json({ 
+      success: true, 
+      data: staffList,
+      staff: staffList,
+      staffList: staffList
+    });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 });
 
-// NOVA ROTA: Caso seu front chame alternativamente por 'get-users'
 app.get('/api/staff/get-users', async (req, res) => {
   try {
     const { companyId } = req.query;
     if (!companyId) return res.status(400).json({ error: 'O parâmetro companyId é obrigatório.' });
+
     const staffList = await Staff.find({ companyId, isActive: true }).populate('specialties');
-    return res.status(200).json({ success: true, data: staffList });
+    return res.status(200).json({ 
+      success: true, 
+      data: staffList,
+      staff: staffList
+    });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -140,14 +150,19 @@ app.get('/api/staff/get-users', async (req, res) => {
 // ==========================================
 // ROTAS DE SERVIÇOS (SERVICES)
 // ==========================================
-// NOVA ROTA: Listar serviços requisitada pelo seu frontend
 app.get('/api/services/list-by-company', async (req, res) => {
   try {
     const { companyId } = req.query;
     if (!companyId) return res.status(400).json({ error: 'O parâmetro companyId é obrigatório.' });
 
     const services = await Service.find({ companyId, isActive: true });
-    return res.status(200).json({ success: true, data: services });
+    
+    // Retorna em múltiplos formatos para o .map() achar a propriedade correta
+    return res.status(200).json({ 
+      success: true, 
+      data: services,
+      services: services
+    });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
