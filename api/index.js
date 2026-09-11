@@ -61,7 +61,7 @@ app.post('/api/customers/create', async (req, res) => {
 });
 
 // ==========================================
-// ROTAS: APPOINTMENTS (LISTAGEM DO ADMIN COM COMPATIBILIDADE DE STATUS)
+// ROTAS: APPOINTMENTS (LISTAGEM DO ADMIN)
 // ==========================================
 app.get('/api/appointments/list', async (req, res) => {
   try {
@@ -70,12 +70,14 @@ app.get('/api/appointments/list', async (req, res) => {
 
     let queryFilter = { companyId };
 
+    // SOLUÇÃO REAL PARA DATA BSON: Cria instâncias numéricas exatas evitando erros de timezone do Node
     if (date) {
-      const parts = date.split('-'); 
+      const parts = date.split('-'); // Quebra '2026-09-11'
       const year = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10) - 1; 
+      const month = parseInt(parts[1], 10) - 1; // Meses no JS começam em 0
       const day = parseInt(parts[2], 10);
 
+      // Define o início e fim do dia travados no horário local (-3h de Brasília inseridos via UTC)
       const startOfDay = new Date(Date.UTC(year, month, day, 3, 0, 0, 0));
       const endOfDay = new Date(Date.UTC(year, month, day, 26, 59, 59, 999));
 
@@ -86,32 +88,11 @@ app.get('/api/appointments/list', async (req, res) => {
       .populate('customerId')
       .populate('serviceId')
       .populate('professionalId')
-      .lean(); // Converte em objetos JS puros para permitir a injeção de propriedades
-
-    // Mapeia e blinda as propriedades de status e populates para o frontend React
-    const treatedAppointments = appointments.map(app => {
-      const currentStatus = app.status ? app.status.toString().toLowerCase().trim() : 'pending';
-
-      return {
-        ...app,
-        _id: app._id ? app._id.toString() : "",
-        status: currentStatus,
-        
-        // Injeta propriedades booleanas caso o front faça validações diretas por flag
-        isPending: currentStatus === 'pending',
-        isCanceled: currentStatus === 'canceled',
-        isCompleted: currentStatus === 'completed',
-
-        // Fallbacks de segurança para evitar quebras de renderização no card
-        customerId: app.customerId || { name: "Cliente não encontrado", phone: "N/A" },
-        serviceId: app.serviceId || { name: "Serviço não encontrado", price: 0, durationInMinutes: 0 },
-        professionalId: app.professionalId || { name: "Profissional não encontrado" }
-      };
-    });
+      .lean();
 
     return res.status(200).json({
       success: true,
-      data: treatedAppointments
+      data: appointments
     });
   } catch (e) { 
     return res.status(500).json({ error: e.message }); 
