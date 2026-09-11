@@ -61,7 +61,7 @@ app.post('/api/customers/create', async (req, res) => {
 });
 
 // ==========================================
-// ROTAS: APPOINTMENTS (LISTAGEM DO ADMIN)
+// ROTAS: APPOINTMENTS (LISTAGEM DO ADMIN COM COMPATIBILIDADE DE STATUS)
 // ==========================================
 app.get('/api/appointments/list', async (req, res) => {
   try {
@@ -71,20 +71,51 @@ app.get('/api/appointments/list', async (req, res) => {
     let queryFilter = { companyId };
 
     if (date) {
-      const startOfDay = new Date(date);
-      startOfDay.setUTCHours(0, 0, 0, 0);
-      const endOfDay = new Date(date);
-      endOfDay.setUTCHours(23, 59, 59, 999);
+      const parts = date.split('-'); 
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1; 
+      const day = parseInt(parts[2], 10);
+
+      const startOfDay = new Date(Date.UTC(year, month, day, 3, 0, 0, 0));
+      const endOfDay = new Date(Date.UTC(year, month, day, 26, 59, 59, 999));
+
       queryFilter.startTime = { $gte: startOfDay, $lte: endOfDay };
     }
 
     const appointments = await Appointment.find(queryFilter)
       .populate('customerId')
       .populate('serviceId')
-      .populate('professionalId');
+      .populate('professionalId')
+      .lean(); // Converte em objetos JS puros para permitir a injeção de propriedades
 
-    return res.status(200).json({ success: true, data: appointments });
-  } catch (e) { return res.status(500).json({ error: e.message }); }
+    // Mapeia e blinda as propriedades de status e populates para o frontend React
+    const treatedAppointments = appointments.map(app => {
+      const currentStatus = app.status ? app.status.toString().toLowerCase().trim() : 'pending';
+
+      return {
+        ...app,
+        _id: app._id ? app._id.toString() : "",
+        status: currentStatus,
+        
+        // Injeta propriedades booleanas caso o front faça validações diretas por flag
+        isPending: currentStatus === 'pending',
+        isCanceled: currentStatus === 'canceled',
+        isCompleted: currentStatus === 'completed',
+
+        // Fallbacks de segurança para evitar quebras de renderização no card
+        customerId: app.customerId || { name: "Cliente não encontrado", phone: "N/A" },
+        serviceId: app.serviceId || { name: "Serviço não encontrado", price: 0, durationInMinutes: 0 },
+        professionalId: app.professionalId || { name: "Profissional não encontrado" }
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: treatedAppointments
+    });
+  } catch (e) { 
+    return res.status(500).json({ error: e.message }); 
+  }
 });
 
 // ==========================================
@@ -99,41 +130,63 @@ app.get('/api/appointments/available-slots', async (req, res) => {
       return res.status(200).json({ availableSlots: [] });
     }
 
-    const startOfDay = new Date(date);
-    startOfDay.setUTCHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setUTCHours(23, 59, 59, 999);
+    // Validação retroativa segura por fuso de São Paulo
+    const nowInBr = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+    const todayStr = nowInBr.getFullYear() + '-' + String(nowInBr.getMonth() + 1).padStart(2, '0') + '-' + String(nowInBr.getDate()).padStart(2, '0');
 
-    const existingAppointments = await Appointment.find({
+    if (date < todayStr) {
+      return res.status(200).json({ availableSlots: [] });
+    }
+
+    const parts = date.split('-');
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+
+    const startOfDay = new Date(Date.UTC(year, month, day, 3, 0, 0, 0));
+    const endOfDay = new Date(Date.UTC(year, month, day, 26, 59, 59, 999));
+
+    let appointmentFilter = {
       companyId,
-      professionalId,
       startTime: { $gte: startOfDay, $lte: endOfDay },
       status: { $ne: 'canceled' }
-    });
+    };
 
-    // Grade padrão operacional de atendimento
+    if (professionalId && professionalId !== 'undefined' && professionalId !== '') {
+      appointmentFilter.professionalId = professionalId;
+    }
+
+    const existingAppointments = await Appointment.find(appointmentFilter);
+
     const defaultHours = [
       "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", 
       "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30"
     ];
     
-    // Filtra e monta os objetos contendo a propriedade .dateTimeIso esperada pelo .map() do frontend
     const slotsFormatted = defaultHours
       .filter(time => {
-        return !existingAppointments.some(app => {
+        const hourParts = time.split(':');
+        const slotDateTime = new Date(Date.UTC(year, month, day, parseInt(hourParts[0], 10) + 3, parseInt(hourParts[1], 10), 0, 0));
+
+        if (date === todayStr && slotDateTime < nowInBr) {
+          return false;
+        }
+
+        const isOccupied = existingAppointments.some(app => {
           const appTime = new Date(app.startTime).toLocaleTimeString('pt-BR', { 
-            hour: '2-digit', minute: '2-digit', timeZone: 'UTC' 
+            hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' 
           });
           return appTime === time;
         });
+
+        return !isOccupied;
       })
       .map(time => {
-        // Concatena a data com o horário para gerar a string ISO válida
-        const dateTimeIso = new Date(`${date}T${time}:00.000Z`).toISOString();
+        const hourParts = time.split(':');
+        const dateTimeIso = new Date(Date.UTC(year, month, day, parseInt(hourParts[0], 10) + 3, parseInt(hourParts[1], 10), 0, 0)).toISOString();
         return { time, dateTimeIso };
       });
 
-    // CORREÇÃO CRUCIAL: Responde exatamente no objeto esperado pelo useEffect do seu App.jsx
     return res.status(200).json({
       success: true,
       availableSlots: slotsFormatted
@@ -152,11 +205,30 @@ app.post('/api/appointments/create', async (req, res) => {
       return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
     }
 
+    const start = new Date(startTime);
+    const nowInBr = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+    
+    if (start < nowInBr) {
+      return res.status(400).json({ error: 'Não é possível realizar agendamentos em horários passados.' });
+    }
+
     const service = await Service.findById(serviceId);
     if (!service) return res.status(404).json({ error: 'Serviço não encontrado.' });
 
-    const start = new Date(startTime);
     const end = new Date(start.getTime() + service.durationInMinutes * 60000);
+
+    const hasConflict = await Appointment.findOne({
+      companyId,
+      professionalId,
+      status: { $ne: 'canceled' },
+      $or: [
+        { startTime: { $lt: end }, endTime: { $gt: start } }
+      ]
+    });
+
+    if (hasConflict) {
+      return res.status(400).json({ error: 'Este profissional já possui um agendamento neste horário.' });
+    }
 
     const newAppointment = await Appointment.create({
       companyId, customerId, professionalId, serviceId,
@@ -196,29 +268,16 @@ app.get('/api/staff/list-by-company', async (req, res) => {
     const { companyId } = req.query;
     if (!companyId) return res.status(400).json({ error: 'companyId obrigatório.' });
     const staffList = await Staff.find({ companyId, isActive: true }).populate('specialties');
-    
-    // CORREÇÃO CRUCIAL: Devolve a chave nomeada 'staff' esperada pelo setStaffList(staffRes.staff)
-    return res.status(200).json({
-      success: true,
-      data: staffList,
-      staff: staffList
-    });
+    return res.status(200).json({ success: true, staff: staffList });
   } catch (e) { return res.status(200).json({ staff: [] }); }
 });
 
 app.get('/api/services/list-by-company', async (req, res) => {
   try {
     const { companyId } = req.query;
-    if (!companyId) return res.status(400).json({ error: 'companyId obrigatório.' });
-    const services = await Service.find({ companyId, isActive: true });
-    
-    // CORREÇÃO CRUCIAL: Devolve a chave nomeada 'services' esperada pelo setServices(servicesRes.services)
-    return res.status(200).json({
-      success: true,
-      data: services,
-      services: services
-    });
-  } catch (e) { return res.status(200).json({ services: [] }); }
+if (!companyId) return res.status(400).json({ error: 'companyId obrigatório.' });
+const services = await Service.find({ companyId, isActive: true });
+return res.status(200).json({ success: true, services: services });
+} catch (e) { return res.status(200).json({ services: [] }); }
 });
-
 export default app;

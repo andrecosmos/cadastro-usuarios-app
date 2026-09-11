@@ -146,9 +146,14 @@ export default function AdminPanel() {
                     {/* Dados do Horário e Cliente */}
                     <div className="flex items-start gap-4">
                       <div className="bg-indigo-50 text-indigo-700 font-bold px-3 py-2 rounded-xl text-center min-w-[75px]">
-                        <span className="text-sm block">{format(new Date(app.startTime), 'HH:mm')}</span>
-                        <span className="text-xs text-indigo-400 font-normal">até {format(new Date(app.endTime), 'HH:mm')}</span>
-                      </div>
+  <span className="text-sm block">
+    {app.startTime ? new Date(app.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : '--:--'}
+  </span>
+  <span className="text-xs text-indigo-400 font-normal">
+    até {app.endTime ? new Date(app.endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : '--:--'}
+  </span>
+</div>
+
                       <div>
                         <h3 className="font-semibold text-gray-800">{app.customerId?.name}</h3>
                         <p className="text-xs text-gray-500">📞 {app.customerId?.phone}</p>
