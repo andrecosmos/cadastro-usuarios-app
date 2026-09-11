@@ -42,22 +42,31 @@ app.post('/api/companies/create', async (req, res) => {
 
 app.get('/api/companies/get-by-slug', async (req, res) => {
   try {
+    // Desativa o cache de forma agressiva para forçar o carregamento inicial dos dados no front
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    
     const { slug } = req.query;
     if (!slug) return res.status(400).json({ error: 'Slug obrigatório.' });
+
     const company = await Company.findOne({ slug });
     if (!company) return res.status(404).json({ error: 'Não encontrado.' });
-    return res.status(200).json({ success: true, company });
-  } catch (e) { return res.status(500).json({ error: e.message }); }
+
+    // HÍBRIDO: Devolve os dados dentro do objeto 'company', mas também espalhado na raiz
+    // Isso evita o erro de 'undefined' no .map() inicial do React caso ele busque direto na raiz do JSON
+    return res.status(200).json({
+      success: true,
+      company: company,
+      _id: company._id ? company._id.toString() : "",
+      name: company.name,
+      slug: company.slug,
+      planStatus: company.planStatus
+    });
+  } catch (e) { 
+    return res.status(500).json({ error: e.message }); 
+  }
 });
 
-app.post('/api/customers/create', async (req, res) => {
-  try {
-    const { companyId, name, email, phone } = req.body;
-    if (!companyId || !name || !phone) return res.status(400).json({ error: 'Campos ausentes.' });
-    const newCustomer = await Customer.create({ companyId, name, email, phone });
-    return res.status(201).json({ success: true, data: newCustomer });
-  } catch (e) { return res.status(500).json({ error: e.message }); }
-});
+
 
 // ==========================================
 // ROTAS: APPOINTMENTS (LISTAGEM DO ADMIN)
