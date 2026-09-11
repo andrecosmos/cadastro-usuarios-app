@@ -133,7 +133,11 @@ app.get('/api/appointments/available-slots', async (req, res) => {
       });
     });
 
-    // Retorna o array de strings puro diretamente, que é o padrão esperado pelo .length
+    // Injeta propriedades no array para satisfazer qualquer formato do front
+    availableSlots.success = true;
+    availableSlots.data = availableSlots;
+    availableSlots.slots = availableSlots;
+
     return res.status(200).json(availableSlots);
   } catch (error) {
     return res.status(200).json([]);
@@ -156,19 +160,26 @@ app.put('/api/appointments/update-status', handleUpdateStatus);
 app.patch('/api/appointments/update-status', handleUpdateStatus);
 
 // ==========================================
-// ROTAS: STAFF & SERVICES (RETORNO DE ARRAYS PUROS)
+// ROTAS: STAFF & SERVICES (HÍBRIDAS - ARRAY + OBJETO)
 // ==========================================
 app.get('/api/staff/list-by-company', async (req, res) => {
   try {
     const { companyId } = req.query;
     if (!companyId) return res.status(400).json({ error: 'companyId obrigatório.' });
-    
     const staffList = await Staff.find({ companyId, isActive: true }).populate('specialties');
     
-    // CORREÇÃO CRUCIAL: Retorna o ARRAY PURO direto na raiz para o .map() inicial do React
+    // Configura o retorno para responder como array puro E como objeto contendo .data e .staff
+    staffList.success = true;
+    staffList.data = staffList;
+    staffList.staff = staffList;
+    staffList.staffList = staffList;
+
     return res.status(200).json(staffList);
   } catch (e) { 
-    return res.status(200).json([]); // Fallback seguro para o front não dar tela branca se o banco falhar
+    const fallback = [];
+    fallback.data = [];
+    fallback.staff = [];
+    return res.status(200).json(fallback); 
   }
 });
 
@@ -176,17 +187,20 @@ app.get('/api/services/list-by-company', async (req, res) => {
   try {
     const { companyId } = req.query;
     if (!companyId) return res.status(400).json({ error: 'companyId obrigatório.' });
-    
     const services = await Service.find({ companyId, isActive: true });
     
-    // CORREÇÃO CRUCIAL: Retorna o ARRAY PURO direto na raiz
+    // Configura o retorno para responder como array puro E como objeto contendo .data e .services
+    services.success = true;
+    services.data = services;
+    services.services = services;
+
     return res.status(200).json(services);
   } catch (e) { 
-    return res.status(200).json([]); 
+    const fallback = [];
+    fallback.data = [];
+    fallback.services = [];
+    return res.status(200).json(fallback); 
   }
 });
-
-export default app;
-
 
 export default app;
