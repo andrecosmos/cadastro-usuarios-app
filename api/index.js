@@ -61,7 +61,7 @@ app.post('/api/customers/create', async (req, res) => {
 });
 
 // ==========================================
-// ROTAS: APPOINTMENTS (LISTAGEM DO ADMIN)
+// ROTAS: APPOINTMENTS (LISTAGEM PADRÃO DO ADMIN)
 // ==========================================
 app.get('/api/appointments/list', async (req, res) => {
   try {
@@ -70,17 +70,9 @@ app.get('/api/appointments/list', async (req, res) => {
 
     let queryFilter = { companyId };
 
-    // SOLUÇÃO REAL PARA DATA BSON: Cria instâncias numéricas exatas evitando erros de timezone do Node
     if (date) {
-      const parts = date.split('-'); // Quebra '2026-09-11'
-      const year = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10) - 1; // Meses no JS começam em 0
-      const day = parseInt(parts[2], 10);
-
-      // Define o início e fim do dia travados no horário local (-3h de Brasília inseridos via UTC)
-      const startOfDay = new Date(Date.UTC(year, month, day, 3, 0, 0, 0));
-      const endOfDay = new Date(Date.UTC(year, month, day, 26, 59, 59, 999));
-
+      const startOfDay = new Date(`${date}T00:00:00.000Z`);
+      const endOfDay = new Date(`${date}T23:59:59.999Z`);
       queryFilter.startTime = { $gte: startOfDay, $lte: endOfDay };
     }
 
@@ -90,6 +82,7 @@ app.get('/api/appointments/list', async (req, res) => {
       .populate('professionalId')
       .lean();
 
+    // Retorna exatamente a estrutura de objetos limpos que o Axios decodifica
     return res.status(200).json({
       success: true,
       data: appointments
@@ -111,33 +104,15 @@ app.get('/api/appointments/available-slots', async (req, res) => {
       return res.status(200).json({ availableSlots: [] });
     }
 
-    // Validação retroativa segura por fuso de São Paulo
-    const nowInBr = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-    const todayStr = nowInBr.getFullYear() + '-' + String(nowInBr.getMonth() + 1).padStart(2, '0') + '-' + String(nowInBr.getDate()).padStart(2, '0');
+    const startOfDay = new Date(`${date}T00:00:00.000Z`);
+    const endOfDay = new Date(`${date}T23:59:59.999Z`);
 
-    if (date < todayStr) {
-      return res.status(200).json({ availableSlots: [] });
-    }
-
-    const parts = date.split('-');
-    const year = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1;
-    const day = parseInt(parts[2], 10);
-
-    const startOfDay = new Date(Date.UTC(year, month, day, 3, 0, 0, 0));
-    const endOfDay = new Date(Date.UTC(year, month, day, 26, 59, 59, 999));
-
-    let appointmentFilter = {
+    const existingAppointments = await Appointment.find({
       companyId,
+      professionalId,
       startTime: { $gte: startOfDay, $lte: endOfDay },
       status: { $ne: 'canceled' }
-    };
-
-    if (professionalId && professionalId !== 'undefined' && professionalId !== '') {
-      appointmentFilter.professionalId = professionalId;
-    }
-
-    const existingAppointments = await Appointment.find(appointmentFilter);
+    });
 
     const defaultHours = [
       "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", 
@@ -146,25 +121,16 @@ app.get('/api/appointments/available-slots', async (req, res) => {
     
     const slotsFormatted = defaultHours
       .filter(time => {
-        const hourParts = time.split(':');
-        const slotDateTime = new Date(Date.UTC(year, month, day, parseInt(hourParts[0], 10) + 3, parseInt(hourParts[1], 10), 0, 0));
-
-        if (date === todayStr && slotDateTime < nowInBr) {
-          return false;
-        }
-
         const isOccupied = existingAppointments.some(app => {
           const appTime = new Date(app.startTime).toLocaleTimeString('pt-BR', { 
-            hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' 
+            hour: '2-digit', minute: '2-digit', timeZone: 'UTC' 
           });
           return appTime === time;
         });
-
         return !isOccupied;
       })
       .map(time => {
-        const hourParts = time.split(':');
-        const dateTimeIso = new Date(Date.UTC(year, month, day, parseInt(hourParts[0], 10) + 3, parseInt(hourParts[1], 10), 0, 0)).toISOString();
+        const dateTimeIso = new Date(`${date}T${time}:00`).toISOString();
         return { time, dateTimeIso };
       });
 
@@ -177,69 +143,39 @@ app.get('/api/appointments/available-slots', async (req, res) => {
   }
 });
 
-// NOVA ROTA: Criação de agendamentos vinda do formulário
 app.post('/api/appointments/create', async (req, res) => {
   try {
     const { companyId, customerId, professionalId, serviceId, startTime } = req.body;
-    
     if (!companyId || !customerId || !professionalId || !serviceId || !startTime) {
       return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
     }
 
-    const start = new Date(startTime);
-    const nowInBr = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-    
-    if (start < nowInBr) {
-      return res.status(400).json({ error: 'Não é possível realizar agendamentos em horários passados.' });
-    }
-
     const service = await Service.findById(serviceId);
-    if (!service) return res.status(404).json({ error: 'Serviço não encontrado.' });
-
+    const start = new Date(startTime);
     const end = new Date(start.getTime() + service.durationInMinutes * 60000);
-
-    const hasConflict = await Appointment.findOne({
-      companyId,
-      professionalId,
-      status: { $ne: 'canceled' },
-      $or: [
-        { startTime: { $lt: end }, endTime: { $gt: start } }
-      ]
-    });
-
-    if (hasConflict) {
-      return res.status(400).json({ error: 'Este profissional já possui um agendamento neste horário.' });
-    }
 
     const newAppointment = await Appointment.create({
       companyId, customerId, professionalId, serviceId,
       startTime: start, endTime: end, status: 'pending', paymentStatus: 'unpaid'
     });
 
-    return res.status(201).json({
-      success: true,
-      message: 'Agendamento realizado com sucesso!',
-      data: newAppointment
-    });
-  } catch (e) {
-    return res.status(500).json({ error: e.message });
-  }
+    return res.status(201).json({ success: true, message: 'Agendamento com sucesso!', data: newAppointment });
+  } catch (e) { return res.status(500).json({ error: e.message }); }
 });
 
 // ==========================================
-// ROTAS: STATUS & AUXILIARES DO ADMIN
+// ROTAS: UPDATE STATUS (PATCH - EXATAMENTE COMO SEU SERVICE ACESSA)
 // ==========================================
-const handleUpdateStatus = async (req, res) => {
+app.patch('/api/appointments/update-status', async (req, res) => {
   try {
     const { appointmentId, status } = req.body;
     if (!appointmentId || !status) return res.status(400).json({ error: 'Campos ausentes.' });
+
     const updated = await Appointment.findByIdAndUpdate(appointmentId, { status }, { new: true });
     if (!updated) return res.status(404).json({ error: 'Não encontrado.' });
     return res.status(200).json({ success: true, data: updated });
   } catch (e) { return res.status(500).json({ error: e.message }); }
-};
-app.put('/api/appointments/update-status', handleUpdateStatus);
-app.patch('/api/appointments/update-status', handleUpdateStatus);
+});
 
 // ==========================================
 // ROTAS: STAFF & SERVICES
@@ -247,7 +183,6 @@ app.patch('/api/appointments/update-status', handleUpdateStatus);
 app.get('/api/staff/list-by-company', async (req, res) => {
   try {
     const { companyId } = req.query;
-    if (!companyId) return res.status(400).json({ error: 'companyId obrigatório.' });
     const staffList = await Staff.find({ companyId, isActive: true }).populate('specialties');
     return res.status(200).json({ success: true, staff: staffList });
   } catch (e) { return res.status(200).json({ staff: [] }); }
@@ -256,9 +191,68 @@ app.get('/api/staff/list-by-company', async (req, res) => {
 app.get('/api/services/list-by-company', async (req, res) => {
   try {
     const { companyId } = req.query;
-if (!companyId) return res.status(400).json({ error: 'companyId obrigatório.' });
-const services = await Service.find({ companyId, isActive: true });
-return res.status(200).json({ success: true, services: services });
-} catch (e) { return res.status(200).json({ services: [] }); }
+    const services = await Service.find({ companyId, isActive: true });
+    return res.status(200).json({ success: true, services: services });
+  } catch (e) { return res.status(200).json({ services: [] }); }
 });
+
+app.post('/api/services/create', async (req, res) => {
+  try {
+    const { companyId, name, description, durationInMinutes, price } = req.body;
+    if (!companyId || !name || !durationInMinutes) {
+      return res.status(400).json({ error: 'Empresa, nome e duração são obrigatórios.' });
+    }
+
+    const newService = await Service.create({
+      companyId,
+      name,
+      description: description || '',
+      durationInMinutes: parseInt(durationInMinutes, 10),
+      price: parseFloat(price) || 0,
+      isActive: true
+    });
+
+    return res.status(201).json({ success: true, data: newService });
+  } catch (e) { return res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/staff/create', async (req, res) => {
+
+  try {
+
+    const {
+      companyId,
+      name,
+      email,
+      specialties
+    } = req.body;
+
+    if (!companyId || !name) {
+      return res.status(400).json({
+        error: 'Empresa e nome são obrigatórios.'
+      });
+    }
+
+    const newStaff = await Staff.create({
+      companyId,
+      name,
+      email,
+      specialties: specialties || [],
+      isActive: true
+    });
+
+    return res.status(201).json({
+      success: true,
+      data: newStaff
+    });
+
+  } catch (e) {
+
+    return res.status(500).json({
+      error: e.message
+    });
+
+  }
+});
+
 export default app;

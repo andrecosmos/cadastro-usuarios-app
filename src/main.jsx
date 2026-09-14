@@ -2,62 +2,113 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 
 import {
-    BrowserRouter,
-    Routes,
-    Route
+  BrowserRouter,
+  Routes,
+  Route
 } from 'react-router-dom';
 
 import App from './App.jsx';
 
-import AdminLayout from './pages/Admin/AdminLayout.jsx';
-import Dashboard from './pages/Admin/Dashboard.jsx';
+import AdminLayout
+  from './pages/Admin/AdminLayout.jsx';
+
+import Dashboard
+  from './pages/Admin/Dashboard.jsx';
+
+import CadastroEmpresa
+  from './pages/Admin/empresa/CadastroEmpresa.jsx';
+
+import CadastroCliente
+  from './pages/Admin/cliente/CadastroCliente.jsx';
+
+import CadastroProfissional
+  from './pages/Admin/profissional/CadastroProfissional.jsx';
+
+import CadastroServico
+  from './pages/Admin/servico/CadastroServico.jsx';
 
 import './index.css';
 
+
 ReactDOM.createRoot(
-    document.getElementById('root')
+  document.getElementById('root')
 ).render(
 
-    <React.StrictMode>
+  <React.StrictMode>
 
-        <BrowserRouter>
+    <BrowserRouter>
 
-            <Routes>
+      <Routes>
 
-                {/* Cliente */}
-                <Route
-                    path="/:companySlug"
-                    element={<App />}
-                />
+        {/* =====================================
+            ÁREA DO CLIENTE
+        ====================================== */}
 
-                {/* Área administrativa */}
-                <Route
-                    path="/:companySlug/admin"
-                    element={<AdminLayout />}
-                >
-
-                    {/* /:companySlug/admin */}
-                    <Route
-                        index
-                        element={<Dashboard />}
-                    />
-
-                </Route>
+        <Route
+          path="/:companySlug"
+          element={<App />}
+        />
 
 
-                {/* Página inicial */}
-                <Route
-                    path="/"
-                    element={
-                        <div className="flex min-h-screen items-center justify-center font-sans text-gray-500">
-                            Bem-vindo! Acesse através da URL de um estabelecimento parceiro.
-                        </div>
-                    }
-                />
+        {/* =====================================
+            CADASTRO DE EMPRESA
+        ====================================== */}
 
-            </Routes>
+        <Route
+          path="/empresa/nova"
+          element={<CadastroEmpresa />}
+        />
 
-        </BrowserRouter>
 
-    </React.StrictMode>
+        {/* =====================================
+            ÁREA ADMINISTRATIVA
+        ====================================== */}
+
+        <Route
+          path="/:companySlug/admin"
+          element={<AdminLayout />}
+        >
+
+          <Route
+            index
+            element={<Dashboard />}
+          />
+
+          <Route
+            path="servicos/novo"
+            element={<CadastroServico />}
+          />
+
+          <Route
+            path="clientes/novo"
+            element={<CadastroCliente />}
+          />
+
+          <Route
+            path="profissionais/novo"
+            element={<CadastroProfissional />}
+          />
+
+        </Route>
+
+
+        {/* =====================================
+            HOME
+        ====================================== */}
+
+        <Route
+          path="/"
+          element={
+            <div>
+              Bem-vindo! Acesse através da URL
+              de um estabelecimento parceiro.
+            </div>
+          }
+        />
+
+      </Routes>
+
+    </BrowserRouter>
+
+  </React.StrictMode>
 );

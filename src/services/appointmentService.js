@@ -2,15 +2,38 @@
 import { api } from './api.js';
 
 export const appointmentService = {
+
+   // ==========================================
+  // EMPRESAS
+  // ==========================================
   // 1. Cadastra uma nova empresa parceira
   createCompany: (companyData) => {
     return api.post('/api/companies/create', companyData);
   },
 
+   // Adicione esta função dentro do objeto appointmentService
+  getCompanyBySlug: (slug) => {
+    return api.get(`/api/companies/get-by-slug?slug=${slug}`);
+  },
+
+  // ==========================================
+  // SERVIÇOS
+  // ==========================================
+
+
   // 2. Cadastra um serviço para uma empresa
   createService: (serviceData) => {
     return api.post('/api/services/create', serviceData);
   },
+
+  // Adicione estas duas funções dentro do objeto appointmentService existente:
+  getServicesByCompany: (companyId) => {
+    return api.get(`/api/services/list-by-company?companyId=${companyId}`);
+  },
+
+  // ==========================================
+  // AGENDAMENTOS
+  // ==========================================
 
   // 3. Busca a lista de horários livres de um profissional em um dia específico
   getAvailableSlots: (companyId, professionalId, serviceId, date) => {
@@ -31,24 +54,32 @@ export const appointmentService = {
     });
   },
 
-    // Adicione esta função dentro do objeto appointmentService
-  getCompanyBySlug: (slug) => {
-    return api.get(`/api/companies/get-by-slug?slug=${slug}`);
+   
+  // 6. Altera o status (ex: conclui ou cancela um agendamento)
+  updateStatus: (appointmentId, companyId, status) => {
+    return api.patch('/api/appointments/update-status', { appointmentId, companyId, status });
   },
-  
 
-    // Adicione estas duas funções dentro do objeto appointmentService existente:
-  getServicesByCompany: (companyId) => {
-    return api.get(`/api/services/list-by-company?companyId=${companyId}`);
-  },
+  // ==========================================
+  // PROFISSIONAIS
+  // ==========================================
+
+  createStaff: (staffData) =>
+    api.post('/api/staff/create', staffData),
+
 
   getStaffByCompany: (companyId) => {
     return api.get(`/api/staff/list-by-company?companyId=${companyId}`);
   },
+   
+  // ==========================================
+  // CLIENTES
+  // ==========================================
 
-
-  // 6. Altera o status (ex: conclui ou cancela um agendamento)
-  updateStatus: (appointmentId, companyId, status) => {
-    return api.patch('/api/appointments/update-status', { appointmentId, companyId, status });
+  createCustomer: (customerData) => {
+    return api.post('/api/customers/create', customerData);
   }
 };
+
+
+

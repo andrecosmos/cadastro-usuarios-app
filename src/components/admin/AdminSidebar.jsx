@@ -13,13 +13,18 @@ export default function AdminSidebar({ company }) {
         },
         {
             label: 'Cadastrar Serviço',
-            path: `/` + companySlug + `/admin/servicos`,
+            path: `/` + companySlug + `/admin/servicos/novo`,
             icon: '🛠️'
         },
         {
             label: 'Cadastrar Profissional',
-            path: `/` + companySlug + `/admin/profissionais`,
+            path: `/` + companySlug + `/admin/profissionais/novo`,
             icon: '👥'
+        },
+        {
+            label: 'Cadastrar Cliente',
+            path: `/` + companySlug + `/admin/clientes/novo`,
+            icon: '👤'
         }
     ];
 
