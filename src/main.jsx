@@ -30,6 +30,11 @@ import CadastroServico
 import './index.css';
 
 
+
+
+import HomePlataforma from './pages/Homeplataforma.jsx';
+
+
 ReactDOM.createRoot(
   document.getElementById('root')
 ).render(
@@ -99,10 +104,7 @@ ReactDOM.createRoot(
         <Route
           path="/"
           element={
-            <div>
-              Bem-vindo! Acesse através da URL
-              de um estabelecimento parceiro.
-            </div>
+            <HomePlataforma />
           }
         />
 

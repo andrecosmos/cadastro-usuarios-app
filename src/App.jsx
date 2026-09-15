@@ -1,11 +1,12 @@
-// src/App.jsx
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { appointmentService } from './services/appointmentService';
+import { FaWhatsapp } from 'react-icons/fa';
+import styles from './App.module.css';
 
-// ⚠️ Mantenha apenas o ID do cliente fixado simulatando o usuário logado no app
+// ⚠️ ID do cliente fixado simulando o usuário logado
 const CUSTOMER_ID = "6aa063fbb68397d9ee19d588"; 
 
 export default function App() {
@@ -15,7 +16,10 @@ export default function App() {
   const [services, setServices] = useState([]);
   const [staffList, setStaffList] = useState([]);
   
-  // Estados para o que o usuário escolheu na tela
+  // Controle de fluxo interno: 'perfil' ou 'formulario'
+  const [step, setStep] = useState('perfil');
+
+  // Estados de seleção do cliente
   const [selectedService, setSelectedService] = useState('');
   const [selectedStaff, setSelectedStaff] = useState('');
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -26,7 +30,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  // 1. Carrega os dados da Empresa pelo Slug da URL
+  // 1. Carrega a Empresa pelo Slug
   useEffect(() => {
     async function loadCompany() {
       try {
@@ -42,7 +46,7 @@ export default function App() {
     if (companySlug) loadCompany();
   }, [companySlug]);
 
-  // 2. Carrega as listas de Serviços e Profissionais após descobrir o ID da Empresa
+  // 2. Carrega Serviços e Profissionais
   useEffect(() => {
     async function loadCompanyData() {
       if (!company?._id) return;
@@ -54,17 +58,17 @@ export default function App() {
         setServices(servicesRes.services);
         setStaffList(staffRes.staff);
       } catch (err) {
-        setError('Erro ao carregar os dados de atendimento do estabelecimento.');
+        setError('Erro ao carregar dados do estabelecimento.');
       }
     }
     loadCompanyData();
   }, [company]);
 
-  // 3. Busca horários livres APENAS quando Serviço, Profissional e Data estiverem definidos
+  // 3. Busca horários livres dinamicamente
   useEffect(() => {
     async function loadSlots() {
       if (!company?._id || !selectedStaff || !selectedService || !selectedDate) {
-        setAvailableSlots([]); // Limpa se faltar alguma seleção
+        setAvailableSlots([]);
         return;
       }
       
@@ -111,100 +115,157 @@ export default function App() {
   const dateFormatted = format(new Date(selectedDate + 'T12:00:00'), "EEEE, dd 'de' MMMM", { locale: ptBR });
 
   if (loadingCompany) {
-    return <div className="flex min-h-screen items-center justify-center text-gray-500 font-sans">Identificando estabelecimento...</div>;
+    return <div className={styles.loadingScreen}>Identificando estabelecimento...</div>;
   }
 
   if (error && !company) {
-    return <div className="flex min-h-screen items-center justify-center text-red-500 font-sans p-4 text-center">⚠️ {error}</div>;
+    return <div className={styles.errorScreen}>⚠️ {error}</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 font-sans">
-      <div className="max-w-md mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        
-        {/* Cabeçalho */}
-        <div className="bg-indigo-600 px-6 py-6 text-white text-center">
-          <h1 className="text-xl font-bold tracking-tight">{company?.name}</h1>
-          <p className="text-indigo-100 text-sm mt-1">Selecione as opções abaixo para agendar</p>
-        </div>
+    <div className={styles.pageWrapper}>
+      
+      {/* TELA 1: PERFIL */}
+      {step === 'perfil' && (
+        <div className={styles.cardContainer}>
+          <div>
+            <div className={styles.profileHeader}>
+              <div className={styles.avatarCircle}>
+                {company?.name ? company.name.charAt(0).toUpperCase() : '🏢'}
+              </div>
+              <h1>{company?.name}</h1>
+              <span className={styles.verifiedBadge}>✓ Estabelecimento Verificado</span>
+            </div>
 
-        <div className="p-6">
-          {error && <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg">⚠️ {error}</div>}
-          {successMessage && <div className="mb-4 p-3 bg-green-50 text-green-700 text-sm rounded-lg">✅ {successMessage}</div>}
+            <div className={styles.welcomeBody}>
+              <h2>Olá! Seja bem-vindo(a).</h2>
+              <p>Escolha os melhores serviços, veja os horários disponíveis e reserve o seu atendimento em poucos cliques.</p>
+              
+              {/* Vitrine Informativa dos Serviços Prestados */}
+              {services.length > 0 && (
+                <div className={styles.previewServicesContainer}>
+                  <h3>Serviços prestados no local:</h3>
+                  <div className={styles.previewServicesList}>
+                    {services.slice(0, 3).map(s => (
+                      <div key={s._id} className={styles.previewServiceCard}>
+                        <span>{s.name}</span>
+                        <strong>R$ {s.price.toFixed(2)}</strong>
+                      </div>
+                    ))}
+                    {services.length > 3 && (
+                      <p className={styles.moreServicesCount}>+ {services.length - 3} outros serviços disponíveis</p>
+                    )}
+                  </div>
+                </div>
+              )}
 
-          {/* Passo 1: Seleção de Serviço */}
-          <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">1. Escolha o Serviço:</label>
-            <select
-              value={selectedService}
-              onChange={(e) => setSelectedService(e.target.value)}
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="">Selecione um serviço...</option>
-              {services.map(s => (
-                <option key={s._id} value={s._id}>{s.name} - R$ {s.price.toFixed(2)} ({s.durationInMinutes} min)</option>
-              ))}
-            </select>
+              <button onClick={() => setStep('formulario')} className={styles.btnActionPrimary}>
+                📅 Iniciar Agendamento
+              </button>
+            </div>
           </div>
 
-          {/* Passo 2: Seleção de Profissional */}
-          <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">2. Escolha o Profissional:</label>
-            <select
-              value={selectedStaff}
-              onChange={(e) => setSelectedStaff(e.target.value)}
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="">Selecione um profissional...</option>
-              {staffList.map(st => (
-                <option key={st._id} value={st._id}>{st.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Passo 3: Seleção de Data */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">3. Selecione o Dia:</label>
-            <input
-              type="date"
-              value={selectedDate}
-              min={format(new Date(), 'yyyy-MM-dd')}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-
-          {/* Painel de Horários */}
-          <div className="border-t border-gray-100 pt-4">
-            <h2 className="text-sm font-semibold text-gray-700 mb-3 capitalize">Horários para {dateFormatted}:</h2>
-            
-            {!selectedService || !selectedStaff ? (
-              <div className="text-center py-6 text-gray-400 bg-gray-50 rounded-xl border border-dashed text-xs">
-                Selecione o serviço e o profissional para liberar os horários.
-              </div>
-            ) : loadingSlots ? (
-              <div className="text-center py-6 text-gray-500 text-sm">Carregando horários vagos...</div>
-            ) : availableSlots.length === 0 ? (
-              <div className="text-center py-6 text-gray-400 bg-gray-50 rounded-xl border border-dashed text-sm">
-                Não há horários disponíveis para este profissional nesta data.
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-3">
-                {availableSlots.map((slot) => (
-                  <button
-                    key={slot.dateTimeIso}
-                    onClick={() => handleBookAppointment(slot.dateTimeIso)}
-                    className="py-2.5 px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium rounded-xl text-center text-sm border border-indigo-100/50 transition-all duration-150 active:scale-95"
-                  >
-                    {slot.time}
-                  </button>
-                ))}
-              </div>
+          <div className={styles.profileFooter}>
+            {company?.phone && (
+              <a 
+                href={`https://wa.me{company.phone.replace(/\D/g, '')}`}
+                target="_blank"
+                rel="noreferrer"
+                className={styles.whatsappLink}
+              >
+                <FaWhatsapp size={20} /> Precisa de ajuda? Falar com o local
+              </a>
             )}
+            <p>© {new Date().getFullYear()} {company?.name}. Todos os direitos reservados.</p>
+          </div>
+        </div>
+      )}
+
+      {/* TELA 2: FORMULÁRIO */}
+      {step === 'formulario' && (
+        <div className={styles.cardContainer}>
+          <div className={styles.formHeader}>
+            <button onClick={() => setStep('perfil')} className={styles.btnBack}>⬅️</button>
+            <div>
+              <h1>{company?.name}</h1>
+              <p>Preencha os dados abaixo</p>
+            </div>
           </div>
 
+          <div className={styles.formBody}>
+            {error && <div className={styles.alertError}>⚠️ {error}</div>}
+            {successMessage && <div className={styles.alertSuccess}>✅ {successMessage}</div>}
+
+            <div className={styles.inputField}>
+              <label>1. Escolha o Serviço:</label>
+              <select
+                value={selectedService}
+                onChange={(e) => {
+                  setSelectedService(e.target.value);
+                  setAvailableSlots([]);
+                }}
+              >
+                <option value="">Selecione um serviço...</option>
+                {services.map(s => (
+                  <option key={s._id} value={s._id}>{s.name} - R$ {s.price.toFixed(2)} ({s.durationInMinutes} min)</option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.inputField}>
+              <label>2. Escolha o Profissional:</label>
+              <select
+                value={selectedStaff}
+                onChange={(e) => {
+                  setSelectedStaff(e.target.value);
+                  setAvailableSlots([]);
+                }}
+              >
+                <option value="">Selecione um profissional...</option>
+                {staffList.map(st => (
+                  <option key={st._id} value={st._id}>{st.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.inputField}>
+              <label>3. Selecione o Dia:</label>
+              <input
+                type="date"
+                value={selectedDate}
+                min={format(new Date(), 'yyyy-MM-dd')}
+                onChange={(e) => setSelectedDate(e.target.value)}
+              />
+            </div>
+
+            <div className={styles.slotsDivider}>
+              <h2 className={styles.slotsTitle}>Horários para {dateFormatted}:</h2>
+              
+              {!selectedService || !selectedStaff ? (
+                <div className={styles.slotsEmptyState}>Selecione o serviço e o profissional para liberar os horários.</div>
+              ) : loadingSlots ? (
+                <div className={styles.slotsLoading}>Carregando horários vagos...</div>
+              ) : availableSlots.length === 0 ? (
+                <div className={styles.slotsEmptyState}>Não há horários disponíveis para este profissional nesta data.</div>
+              ) : (
+                <div className={styles.slotsGrid}>
+                  {availableSlots.map((slot) => (
+                    <button
+                      key={slot.dateTimeIso}
+                      type="button"
+                      onClick={() => handleBookAppointment(slot.dateTimeIso)}
+                      className={styles.btnSlot}
+                    >
+                      {slot.time || format(new Date(slot.dateTimeIso), 'HH:mm')}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
     </div>
   );
 }

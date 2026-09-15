@@ -1,0 +1,318 @@
+.wrapper {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background-color: #f8fafc;
+  color: #1e293b;
+  min-height: 100vh;
+  padding-bottom: 80px;
+}
+
+/* --- NAVBAR --- */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+  background-color: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.logo span {
+  font-size: 24px;
+  font-weight: 800;
+  color: #2563eb; /* Azul Padrão */
+}
+
+.menuLinks {
+  display: flex;
+  gap: 30px;
+}
+
+.menuLinks a {
+  text-decoration: none;
+  color: #64748b;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.menuLinks a:hover {
+  color: #2563eb;
+}
+
+.navActions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.btnLink {
+  background: none;
+  border: none;
+  color: #475569;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primaryInline {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 7px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.primaryInline:hover {
+  background: #1d4ed8;
+}
+
+/* --- HERO SECTION --- */
+.heroSection {
+  max-width: 900px;
+  margin: 100px auto;
+  text-align: center;
+  padding: 0 20px;
+}
+
+.badge {
+  background-color: #dbeafe;
+  color: #1e40af;
+  padding: 6px 12px;
+  border-radius: 50px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.heroSection h1 {
+  font-size: 48px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-top: 24px;
+  margin-bottom: 20px;
+  line-height: 1.2;
+}
+
+.heroSection p {
+  font-size: 18px;
+  color: #64748b;
+  line-height: 1.6;
+  max-width: 700px;
+  margin: 0 auto 40px auto;
+}
+
+.ctaContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.primaryHero {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 18px 36px;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+  transition: transform 0.2s, background 0.2s;
+}
+
+.primaryHero:hover {
+  background: #1d4ed8;
+  transform: translateY(-2px);
+}
+
+/* --- VITRINE DE NICHOS --- */
+.vitrineSection {
+  max-width: 1200px;
+  margin: 120px auto 40px auto;
+  padding: 0 20px;
+}
+
+.vitrineHeader {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.vitrineHeader h2 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.vitrineHeader p {
+  color: #64748b;
+  font-size: 16px;
+  margin-top: 10px;
+}
+
+.gridNichos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* CORRIGIDO DE '1-fraction' PARA '1fr' */
+  gap: 25px;
+}
+
+.cardNicho {
+  background: #fff;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  border: 1px solid #f1f5f9;
+  position: relative;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.cardNicho:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+
+.iconContainer {
+  font-size: 32px;
+  margin-bottom: 15px;
+}
+
+.cardNicho h3 {
+  font-size: 20px;
+  color: #0f172a;
+  margin-bottom: 10px;
+}
+
+.cardNicho p {
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+/* TAGS DOS CARDS */
+.tag {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.tagPopular {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.tagPremium {
+  background-color: #f3e8ff;
+  color: #7c3aed;
+}
+
+/* --- BOTÃO WHATSAPP --- */
+.whatsappFloat {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  background-color: #25d366;
+  color: white;
+  border-radius: 50px;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 30px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  text-decoration: none;
+  z-index: 100;
+  transition: transform 0.2s;
+}
+
+.whatsappFloat:hover {
+  transform: scale(1.1);
+}
+
+
+
+
+/* --- SEÇÃO DE FUNCIONALIDADES --- */
+.featuresSection {
+  max-width: 1200px;
+  margin: 100px auto;
+  padding: 0 20px;
+}
+
+.featuresHeader {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.featuresHeader span {
+  color: #2563eb;
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.featuresHeader h2 {
+  font-size: 36px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-top: 10px;
+  margin-bottom: 16px;
+}
+
+.featuresHeader p {
+  color: #64748b;
+  font-size: 18px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.featuresGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 30px;
+}
+
+.featureCard {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 32px;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.featureCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(37, 99, 235, 0.05);
+}
+
+.featureIcon {
+  font-size: 28px;
+  background-color: #eff6ff;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.featureCard h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 12px;
+}
+
+.featureCard p {
+  color: #64748b;
+  font-size: 15px;
+  line-height: 1.6;
+}
