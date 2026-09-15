@@ -32,7 +32,7 @@ import './index.css';
 
 
 
-import HomePlataforma from './pages/Homeplataforma.jsx';
+import HomePlataforma from './pages/HomePlataforma.jsx';
 
 
 ReactDOM.createRoot(
