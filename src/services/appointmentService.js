@@ -1,4 +1,5 @@
 // src/services/appointmentService.js
+import { getOverlappingDaysInIntervals } from 'date-fns';
 import { api } from './api.js';
 
 export const appointmentService = {
@@ -11,7 +12,10 @@ export const appointmentService = {
     return api.post('/api/companies/create', companyData);
   },
 
-   // Adicione esta função dentro do objeto appointmentService
+  updateCompany: (companyId, companyData) => {
+    return api.patch('/api/companies/update', { companyId, ...companyData });
+  },
+
   getCompanyBySlug: (slug) => {
     return api.get(`/api/companies/get-by-slug?slug=${slug}`);
   },
@@ -39,6 +43,12 @@ export const appointmentService = {
   getAvailableSlots: (companyId, professionalId, serviceId, date) => {
     return api.get('/api/appointments/available-slots', {
       params: { companyId, professionalId, serviceId, date }
+    });
+  },
+
+   getAppointments: (companyId) => {
+    return api.get('/api/appointments', {
+      params: { companyId }
     });
   },
 

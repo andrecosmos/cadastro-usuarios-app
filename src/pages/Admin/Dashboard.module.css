@@ -1,0 +1,198 @@
+/* Container Principal */
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem; /* space-y-6 */
+}
+
+/* Cabeçalho */
+.headerTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b; /* text-slate-800 */
+}
+
+.headerSubtitle {
+  font-size: 0.875rem;
+  color: #6b7280; /* text-gray-500 */
+  margin-top: 0.25rem;
+}
+
+/* Container do Menu */
+.menuContainer {
+  background-color: #ffffff;
+  border-radius: 1rem;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  padding: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Usando Grid para garantir que os botões se adaptem sem quebrar linhas aleatoriamente */
+.menuFlex {
+  display: grid;
+  grid-template-columns: 1fr; /* No celular, vira uma lista vertical perfeita */
+  gap: 0.5rem;
+  width: 100%;
+}
+
+/* Botão limpo e adaptável */
+.menuBtn {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left; /* Fica alinhado como menu de lista no celular */
+  white-space: nowrap; /* Impede que o texto dentro do botão quebre em duas linhas */
+  box-sizing: border-box;
+}
+
+.menuBtnActive {
+  background-color: #4f46e5;
+  color: #ffffff;
+}
+
+.menuBtnInactive {
+  background-color: transparent;
+  color: #4b5563;
+}
+
+.menuBtnInactive:hover {
+  background-color: #f3f4f6;
+}
+
+/* =========================================================
+   MEDIA QUERY: Telas médias e grandes (Tablets/PCs)
+   ========================================================= */
+@media (min-width: 768px) {
+  .menuFlex {
+    /* Em telas maiores, divide o espaço exatamente em 3 colunas iguais lado a lado */
+    grid-template-columns: repeat(3, 1fr); 
+  }
+
+  .menuBtn {
+    text-align: center; /* Centraliza o texto no Desktop */
+  }
+}
+
+
+/* Métricas Grid */
+/* Correção do Grid para os Cards ficarem lado a lado */
+.metricsGrid {
+  display: grid !important; /* Força o comportamento de Grid */
+  grid-template-columns: repeat(2, minmax(0, 1fr)); /* 2 colunas no mobile */
+  gap: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .metricsGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)); /* 4 colunas em telas grandes (Desktop) */
+  }
+}
+
+/* Nova classe para alinhar os filtros horizontalmente */
+.filtersGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .filtersGrid {
+    grid-template-columns: repeat(3, 1fr); /* 3 colunas em tablets/desktops */
+  }
+}
+
+/* Estilo padrão para os selects de filtro */
+.filterSelect, .searchInput {
+  padding: 0.625rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  background-color: #ffffff;
+  outline: none;
+}
+.filterSelect:focus, .searchInput:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+}
+
+
+/* Cards de Métrica */
+.metricCard {
+  background-color: #ffffff;
+  padding: 1.25rem; /* p-5 */
+  border-radius: 1rem;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.metricLabel {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.metricValue {
+  font-size: 1.875rem; /* text-3xl */
+  font-weight: 700;
+  margin-top: 0.25rem;
+}
+
+/* Cores das Métricas */
+.textTotal { color: #1e293b; }
+.textPending { color: #f59e0b; }
+.textCompleted { color: #059669; }
+.textCanceled { color: #dc2626; }
+
+/* Visão Diária */
+.sectionCard {
+  background-color: #ffffff;
+  padding: 1.25rem;
+  border-radius: 1rem;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  margin-bottom: 1.25rem; /* mb-5 */
+}
+
+.sectionFlex {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .sectionFlex {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.sectionTitle {
+  font-size: 1.125rem; /* text-lg */
+  font-weight: 700;
+  color: #1f2937; /* text-gray-800 */
+  text-transform: capitalize;
+}
+
+/* Input de Data */
+.dateInput {
+  padding: 0.625rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  background-color: #f9fafb; /* bg-gray-50 */
+}
+
+.dateInput:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+}

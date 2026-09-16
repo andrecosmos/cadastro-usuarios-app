@@ -1,0 +1,127 @@
+/* Container que envelopa todo o site */
+.layoutContainer {
+  display: flex;
+  flex-direction: column; /* Celular empilha a barra de topo e o conteúdo */
+  min-height: 100vh;
+  background-color: #f3f4f6;
+  font-family: sans-serif;
+}
+
+/* Barra de Topo exclusiva para o Celular */
+.mobileHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #0f172a;
+  color: #ffffff;
+  padding: 1rem;
+  border-bottom: 1px solid #1e293b;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mobileTitle {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.menuButton {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Menu Lateral / Sidebar */
+.sidebar {
+  background-color: #0f172a;
+  color: #e2e8f0;
+  position: fixed; /* Fixado no topo da tela no mobile */
+  top: 0;
+  left: -280px; /* Começa escondido para fora da tela à esquerda */
+  width: 280px;
+  height: 100vh;
+  z-index: 1000;
+  transition: transform 0.3s ease; /* Efeito suave de deslizar */
+  box-shadow: 4px 0 10px rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
+}
+
+/* Quando o estado de aberto estiver ativo, move a barra para dentro da tela */
+.sidebarOpen {
+  transform: translateX(280px);
+}
+
+/* Fundo escurecido atrás do menu no celular */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+/* Área de Conteúdo Principal */
+.mainContent {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+/* Botão de Fechar dentro da Sidebar no mobile */
+.closeButton {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  font-size: 1.25rem;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 1rem;
+  text-align: right;
+  width: 100%;
+  display: block;
+}
+
+/* =========================================================
+   MEDIA QUERY: Computadores e Tablets (Telas Grandes)
+   ========================================================= */
+@media (min-width: 1024px) {
+  .layoutContainer {
+    flex-direction: row; /* Volta a ficar lado a lado no PC */
+  }
+
+  .mobileHeader, .closeButton {
+    display: none; /* Esconde elementos do celular no computador */
+  }
+
+  .sidebar {
+    position: relative; /* Volta para o fluxo normal do layout */
+    left: 0;
+    width: 256px;
+    height: auto;
+    min-height: 100vh;
+    box-shadow: none;
+    transition: none;
+  }
+
+  .mainContent {
+    padding: 2rem;
+  }
+  
+  .overlay {
+    display: none;
+  }
+}
+
+/* Suporte para Loading/Erro */
+.centerScreen {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+}

@@ -51,6 +51,28 @@ app.get('/api/companies/get-by-slug', async (req, res) => {
   } catch (e) { return res.status(500).json({ error: e.message }); }
 });
 
+app.patch('/api/companies/update', async (req, res) => {
+  try {
+    const { companyId, name, phone } = req.body;
+    if (!companyId) return res.status(400).json({ error: 'companyId obrigatório.' });
+
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (phone) updateData.phone = phone;
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: 'Nenhum campo para atualizar.' });
+    }
+
+    const company = await Company.findByIdAndUpdate(companyId, updateData, { new: true });
+    if (!company) return res.status(404).json({ error: 'Empresa não encontrada.' });
+
+    return res.status(200).json({ success: true, company });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/customers/create', async (req, res) => {
   try {
     const { companyId, name, email, phone } = req.body;

@@ -1,0 +1,152 @@
+/* Card Container */
+.cardContainer {
+  background-color: #ffffff;
+  border-radius: 1rem; /* rounded-2xl */
+  padding: 1.25rem; /* p-5 */
+  border: 1px solid #e5e7eb; /* border-gray-200 */
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem; /* gap-4 */
+  transition: all 0.2s ease-in-out;
+}
+
+.cardContainer:hover {
+  border-color: #d1d5db; /* hover:border-gray-300 */
+}
+
+/* Informações da Esquerda (Horário + Dados) */
+.infoSection {
+  display: flex;
+  align-items: start;
+  gap: 1rem;
+}
+
+/* Bloco de Horário */
+.timeBlock {
+  background-color: #eef2ff; /* bg-indigo-50 */
+  color: #4338ca; /* text-indigo-700 */
+  font-weight: 700;
+  padding: 0.5rem 0.75rem; /* py-2 px-3 */
+  border-radius: 0.75rem; /* rounded-xl */
+  text-align: center;
+  min-width: 75px;
+}
+
+.timeMain {
+  font-size: 0.875rem; /* text-sm */
+  display: block;
+}
+
+.timeSub {
+  font-size: 0.75rem; /* text-xs */
+  color: #818cf8; /* text-indigo-400 */
+  font-weight: 400;
+}
+
+/* Dados do Cliente */
+.customerName {
+  font-weight: 600;
+  color: #1f2937; /* text-gray-800 */
+}
+
+.customerPhone {
+  font-size: 0.75rem; /* text-xs */
+  color: #6b7280; /* text-gray-500 */
+}
+
+/* Tags de Serviço e Profissional */
+.tagsContainer {
+  margin-top: 0.5rem; /* mt-2 */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tagService {
+  background-color: #f3f4f6; /* bg-gray-100 */
+  color: #374151; /* text-gray-700 */
+  font-size: 11px;
+  padding: 0.125rem 0.5rem; /* py-0.5 px-2 */
+  border-radius: 0.375rem; /* rounded-md */
+  font-weight: 500;
+}
+
+.tagProfessional {
+  background-color: #faf5ff; /* bg-purple-50 */
+  color: #6b21a8; /* text-purple-700 */
+  font-size: 11px;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+}
+
+/* Seção de Status e Botões (Direita) */
+.actionSection {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem; /* gap-3 */
+  border-top: 1px solid #f3f4f6; /* border-gray-100 */
+  padding-top: 0.75rem; /* pt-3 */
+  justify-content: flex-end;
+}
+
+/* Badge de Status Padrão */
+.statusBadge {
+  font-size: 0.75rem; /* text-xs */
+  font-weight: 600;
+  padding: 0.25rem 0.625rem; /* py-1 px-2.5 */
+  border-radius: 9999px; /* rounded-full */
+  text-transform: uppercase;
+  letter-spacing: 0.05em; /* tracking-wider */
+}
+
+/* Dinâmicos de Status */
+.statusCompleted { background-color: #d1fae5; color: #065f46; }
+.statusCanceled { background-color: #fee2e2; color: #991b1b; }
+.statusPending { background-color: #fef3c7; color: #92400e; }
+
+/* Botões de Ação */
+.actionGroup {
+  display: flex;
+  gap: 0.375rem; /* gap-1.5 */
+}
+
+.btnConfirm {
+  background-color: #059669; /* bg-emerald-600 */
+  color: #ffffff;
+  font-weight: 500;
+  font-size: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  border: none;
+  transition: background-color 0.2s;
+}
+.btnConfirm:hover { background-color: #047857; }
+
+.btnCancel {
+  background-color: #ffffff;
+  border: 1px solid #fca5a5; /* border-red-200 */
+  color: #dc2626; /* text-red-600 */
+  font-size: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  transition: all 0.2s;
+}
+.btnCancel:hover { background-color: #fef2f2; }
+
+/* =========================================================
+   MEDIA QUERY: Alinhamento Horizontal no Desktop
+   ========================================================= */
+@media (min-width: 768px) {
+  .cardContainer {
+    flex-direction: row; /* Fica lado a lado no PC */
+    align-items: center;
+  }
+
+  .actionSection {
+    border-top: none;
+    padding-top: 0;
+  }
+}

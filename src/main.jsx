@@ -31,8 +31,9 @@ import './index.css';
 
 
 
-
 import HomePlataforma from './pages/HomePlataforma.jsx';
+
+
 
 
 ReactDOM.createRoot(
@@ -104,9 +105,11 @@ ReactDOM.createRoot(
         <Route
           path="/"
           element={
-            <HomePlataforma />
+            <HomePlataforma/>
           }
         />
+
+        
 
       </Routes>
 

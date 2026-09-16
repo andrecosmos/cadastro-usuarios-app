@@ -1,0 +1,17 @@
+/* Container para os estados de Alerta (Carregando ou Lista Vazia) */
+.alertCard {
+  background-color: #ffffff;
+  border-radius: 1rem; /* rounded-2xl */
+  padding: 3rem; /* p-12 */
+  text-align: center;
+  border: 1px solid #e5e7eb; /* border-gray-200 */
+  color: #9ca3af; /* text-gray-400 */
+  font-size: 0.875rem;
+}
+
+/* Container da Lista de Agendamentos (Layout Vertical) */
+.listGrid {
+  display: grid;
+  gap: 1rem; /* gap-4 */
+  width: 100%;
+}
