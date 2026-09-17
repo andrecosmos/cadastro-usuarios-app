@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+// 1. GARANTIDO O IMPORT DO useMemo NO TOPO
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { appointmentService } from '../services/appointmentService';
 
-// 1. IMPORTAR OS ESTILOS DO CSS MODULES
 import styles from './AdminPanel.module.css';
 
 export default function AdminPanel() {
@@ -16,7 +16,6 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  // Controle de estado para abertura da Sidebar no mobile
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -51,6 +50,17 @@ export default function AdminPanel() {
     }
   }, [companyId, selectedDate, activeMenu, loadAppointments]);
 
+  /* =========================================================
+     CÁLCULO DAS MÉTRICAS INTEGRADO E CORRIGIDO
+     ========================================================= */
+  const metrics = useMemo(() => {
+    const total = appointments.length;
+    const completed = appointments.filter(app => app.status === 'completed').length;
+    const canceled = appointments.filter(app => app.status === 'canceled').length;
+    const pending = appointments.filter(app => app.status === 'pending').length;
+    return { total, completed, canceled, pending };
+  }, [appointments]);
+
   async function handleStatusChange(appointmentId, newStatus) {
     const statusText = newStatus === 'completed' ? 'CONCLUÍDO' : 'CANCELADO';
     if (!window.confirm(`Deseja realmente mudar o status para ${statusText}?`)) return;
@@ -71,7 +81,7 @@ export default function AdminPanel() {
   return (
     <div className={styles.layoutContainer}>
       
-      {/* CABEÇALHO SUPERIOR (Apenas Celular) */}
+      {/* CABEÇALHO SUPERIOR (Celular) */}
       <header className={styles.mobileHeader}>
         <span className={styles.mobileTitle}>{company?.name || 'Painel Admin'}</span>
         <button type="button" className={styles.menuButton} onClick={toggleMenu}>
@@ -79,10 +89,10 @@ export default function AdminPanel() {
         </button>
       </header>
 
-      {/* SOMBREAMENTO DE FUNDO (Apenas Celular) */}
+      {/* SOMBREAMENTO (Celular) */}
       {isMenuOpen && <div className={styles.overlay} onClick={toggleMenu} />}
 
-      {/* MENU LATERAL RESPONSIVO */}
+      {/* MENU LATERAL */}
       <aside className={`${styles.sidebar} ${isMenuOpen ? styles.sidebarOpen : ''}`}>
         <button type="button" className={styles.closeButton} onClick={toggleMenu}>
           ✕ Fechar Menu
@@ -103,11 +113,37 @@ export default function AdminPanel() {
         </nav>
       </aside>
 
-      {/* CONTEÚDO DINÂMICO */}
+      {/* CONTEÚDO PRINCIPAL */}
       <main className={styles.mainContent}>
         {activeMenu === 'dashboard' && (
           <div>
-            {/* Filtro de Data */}
+            
+            {/* =========================================================
+                PAINEL DE MÉTRICAS (POSICIONADO NO TOPO DO CONTEÚDO)
+                ========================================================= */}
+            <div className={styles.metricsContainer}>
+              <div className={styles.metricCard}>
+                <p className={styles.metricLabel}>Total</p>
+                <p className={styles.metricValue}>{metrics.total}</p>
+              </div>
+
+              <div className={styles.metricCard}>
+                <p className={`${styles.metricLabel} ${styles.labelPending}`}>Pendentes</p>
+                <p className={`${styles.metricValue} ${styles.valuePending}`}>{metrics.pending}</p>
+              </div>
+
+              <div className={styles.metricCard}>
+                <p className={`${styles.metricLabel} ${styles.labelCompleted}`}>Concluídos</p>
+                <p className={`${styles.metricValue} ${styles.valueCompleted}`}>{metrics.completed}</p>
+              </div>
+
+              <div className={styles.metricCard}>
+                <p className={`${styles.metricLabel} ${styles.labelCanceled}`}>Cancelados</p>
+                <p className={`${styles.metricValue} ${styles.valueCanceled}`}>{metrics.canceled}</p>
+              </div>
+            </div>
+
+            {/* FILTRO DE DATA */}
             <div className={styles.filterCard}>
               <div>
                 <h2 className={styles.filterTitle}>
@@ -123,7 +159,7 @@ export default function AdminPanel() {
               />
             </div>
 
-            {/* Lista dos Cards */}
+            {/* LISTA DOS CARDS */}
             {appointments.length === 0 ? (
               <div className={styles.alertCard}>
                 Nenhum agendamento marcado para esta data.
@@ -136,7 +172,6 @@ export default function AdminPanel() {
 
                   return (
                     <div key={app._id} className={styles.card}>
-                      
                       <div className={styles.cardInfo}>
                         <div className={styles.timeBlock}>
                           <span className={styles.timeMain}>{startTimeStr}</span>
@@ -152,7 +187,6 @@ export default function AdminPanel() {
                         </div>
                       </div>
 
-                      {/* Status e Ações */}
                       <div className={styles.cardActions}>
                         <span className={`${styles.statusBadge} ${
                           app.status === 'completed' ? styles.statusCompleted : 
@@ -164,12 +198,14 @@ export default function AdminPanel() {
                         {app.status !== 'completed' && app.status !== 'canceled' && (
                           <div className={styles.btnGroup}>
                             <button
+                              type="button"
                               onClick={() => handleStatusChange(app._id, 'completed')}
                               className={styles.btnConfirm}
                             >
                               ✓ Concluir
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleStatusChange(app._id, 'canceled')}
                               className={styles.btnCancel}
                             >
@@ -178,7 +214,6 @@ export default function AdminPanel() {
                           </div>
                         )}
                       </div>
-
                     </div>
                   );
                 })}
@@ -187,7 +222,6 @@ export default function AdminPanel() {
           </div>
         )}
       </main>
-
     </div>
   );
 }

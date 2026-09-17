@@ -35,7 +35,6 @@ import HomePlataforma from './pages/HomePlataforma.jsx';
 
 
 
-
 ReactDOM.createRoot(
   document.getElementById('root')
 ).render(
@@ -72,7 +71,7 @@ ReactDOM.createRoot(
 
         <Route
           path="/:companySlug/admin"
-          element={<AdminLayout />}
+          element={<AdminLayout/>}
         >
 
           <Route
