@@ -58,49 +58,44 @@ function CadastroServico() {
     }
 
     try {
+  setLoading(true);
 
-      setLoading(true);
+  // Agora a requisição já vai com o companyId automático vindo do context da empresa
+  await appointmentService.createService({
+    companyId: company._id,
+    name: form.name,
+    description: form.description,
+    durationInMinutes: parseInt(form.durationInMinutes, 10),
+    price: parseFloat(form.price),
+    isActive: true
+  });
 
-      await appointmentService.createService({
-        companyId: company._id,
-        name: form.name,
-        description: form.description,
-        durationInMinutes: parseInt(form.durationInMinutes, 10),
-        price: parseFloat(form.price),
-        isActive: true
-      });
+  setMessage({
+    type: 'success',
+    text: 'Serviço cadastrado com sucesso!'
+  });
 
-      setMessage({
-        type: 'success',
-        text: 'Serviço cadastrado com sucesso!'
-      });
+  setForm({
+    name: '',
+    description: '',
+    durationInMinutes: 30,
+    price: 0
+  });
 
-      setForm({
-        name: '',
-        description: '',
-        durationInMinutes: 30,
-        price: 0
-      });
+} catch (error) {
+  console.error('Erro ao cadastrar serviço:', error);
 
-    } catch (error) {
+  // Captura o erro vindo do Axios de forma segura
+  const apiErrorMessage = error.response?.data?.error || error.response?.data?.message;
 
-      console.error(
-        'Erro ao cadastrar serviço:',
-        error
-      );
+  setMessage({
+    type: 'error',
+    text: apiErrorMessage || 'Não foi possível cadastrar o serviço.'
+  });
+} finally {
+  setLoading(false);
+}
 
-      setMessage({
-        type: 'error',
-        text:
-          error.message ||
-          'Não foi possível cadastrar o serviço.'
-      });
-
-    } finally {
-
-      setLoading(false);
-
-    }
   }
 
   return (

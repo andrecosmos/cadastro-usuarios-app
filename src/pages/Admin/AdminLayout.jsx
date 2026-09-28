@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useParams, Outlet } from 'react-router-dom';
+import { useParams, Outlet, useNavigate } from 'react-router-dom'; // 🌟 ADICIONADO: useNavigate
 
 import { appointmentService } from '../../services/appointmentService';
+import { useAuth } from '../../contexts/AuthContext'; // 🌟 ADICIONADO: useAuth
 import AdminSidebar from '../../components/admin/AdminSidebar';
 
 import styles from './AdminLayout.module.css';
@@ -9,6 +10,10 @@ import styles from './AdminLayout.module.css';
 export default function AdminLayout() {
 
     const { companySlug } = useParams();
+
+    const navigate = useNavigate(); // 🌟 Inicializa o hook de navegação
+
+    const { user, logout } = useAuth(); // 🌟 Captura o usuário logado e a função de sair
 
     const [company, setCompany] = useState(null);
 
@@ -21,7 +26,7 @@ export default function AdminLayout() {
 
     /*
      * =========================================================
-     * CARREGA EMPRESA
+     * CARREGA EMPRESA E VALIDA SEGURANÇA (MULTITENANCY)
      * =========================================================
      */
 
@@ -40,7 +45,24 @@ export default function AdminLayout() {
                         companySlug
                     );
 
-                setCompany(response.company);
+                // 🌟 Mapeamento resiliente do ID para garantir compatibilidade com o Axios
+                const fetchedCompany = response?.company || response?.data?.company || response?.data || response;
+                
+                if (!fetchedCompany) {
+                    setError('Empresa não encontrada.');
+                    return;
+                }
+
+                // 🛡️ TRAVA DE SEGURANÇA CRÍTICA:
+                // Se o usuário estiver logado, mas o companyId do token for diferente do ID da empresa da URL, expulsa
+                if (user && user.companyId && fetchedCompany._id && user.companyId !== fetchedCompany._id) {
+                    alert("Acesso negado: Você não tem permissão para gerenciar este estabelecimento.");
+                    logout(); // Limpa os dados do localStorage por segurança
+                    navigate(`/${companySlug}/login`, { replace: true });
+                    return;
+                }
+
+                setCompany(fetchedCompany);
 
             } catch (err) {
 
@@ -63,7 +85,7 @@ export default function AdminLayout() {
 
         }
 
-    }, [companySlug]);
+    }, [companySlug, user, navigate, logout]); // 🌟 Adicionadas as dependências de segurança
 
 
     /*

@@ -31,6 +31,48 @@
   box-sizing: border-box;
 }
 
+.sessionHeader {
+  width: 100%;
+  min-height: 56px;
+  padding: 0 24px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background-color: #0f172a;
+  color: #ffffff;
+}
+
+.sessionActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sessionUser {
+  max-width: 220px;
+  overflow: hidden;
+  color: #cbd5e1;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logoutButton {
+  padding: 7px 12px;
+  border: 1px solid #64748b;
+  border-radius: 6px;
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+}
+
+.logoutButton:hover {
+  background-color: #334155;
+}
+
 /* --- CONTAINER CENTRALIZADO DO CARD --- */
 .cardContainer {
   width: 100%;
@@ -174,6 +216,19 @@
 
 .profileFooter p {
   margin: 0;
+}
+
+@media (max-width: 520px) {
+  .sessionHeader {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 14px 16px;
+  }
+
+  .sessionActions {
+    justify-content: space-between;
+    width: 100%;
+  }
 }
 
 .copyrightText {

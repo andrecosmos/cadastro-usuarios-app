@@ -406,10 +406,10 @@ export default function Dashboard() {
         return currentAppointments.filter(app => {
 
             const customerName =
-                app.customerId?.name?.toLowerCase() || '';
+                app.customerId?.nome?.toLowerCase() || '';
 
             const phone =
-                app.customerId?.phone || '';
+                app.customerId?.telefone || '';
 
             const search =
                 searchTerm.toLowerCase();

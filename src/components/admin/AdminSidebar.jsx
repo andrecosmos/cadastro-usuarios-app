@@ -1,10 +1,18 @@
-import { NavLink, useParams } from 'react-router-dom';
+import { NavLink, useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
 // 1. IMPORTAR OS ESTILOS MODULE
 import styles from './AdminSidebar.module.css';
 
 export default function AdminSidebar({ company }) {
     const { companySlug } = useParams();
+    const navigate = useNavigate();
+    const { user, logout } = useAuth();
+
+    function handleLogout() {
+        logout();
+        navigate(`/${companySlug}/login`);
+    }
 
     const menuItems = [
         {
@@ -35,12 +43,34 @@ export default function AdminSidebar({ company }) {
 
             {/* Cabeçalho da empresa */}
             <div className={styles.header}>
-                <h1 className={styles.companyName}>
-                    {company?.name}
-                </h1>
-                <span className={styles.badge}>
-                    Painel Admin
-                </span>
+                <div className={styles.headerTop}>
+                    <div className={styles.companyInfo}>
+                        <h1 className={styles.companyName}>
+                            {company?.name}
+                        </h1>
+                        <span className={styles.badge}>
+                            Painel Admin
+                        </span>
+                    </div>
+
+                    <button
+                        type="button"
+                        className={styles.logoutButton}
+                        onClick={handleLogout}
+                    >
+                        Sair
+                    </button>
+                </div>
+
+                <div className={styles.sessionInfo}>
+                    <span className={styles.sessionLabel}>Logado como</span>
+                    <strong className={styles.sessionName}>
+                        {user?.name || user?.email || 'Administrador'}
+                    </strong>
+                    {user?.name && (
+                        <span className={styles.sessionEmail}>{user.email}</span>
+                    )}
+                </div>
             </div>
 
             {/* Menu */}

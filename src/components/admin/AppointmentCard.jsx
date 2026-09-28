@@ -58,10 +58,10 @@ export default function AppointmentCard({
                 {/* Cliente */}
                 <div>
                     <h3 className={styles.customerName}>
-                        {customerId?.name || 'Cliente'}
+                        {customerId?.nome || 'Cliente'}
                     </h3>
                     <p className={styles.customerPhone}>
-                        📞 {customerId?.phone || 'Telefone não informado'}
+                        📞 {customerId?.telefone || 'Telefone não informado'}
                     </p>
 
                     {/* Serviço e profissional */}

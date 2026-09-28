@@ -4,6 +4,7 @@
   color: #1e293b;
   min-height: 100vh;
   padding-bottom: 80px;
+  scroll-behavior: smooth;
 }
 
 /* --- NAVBAR --- */
@@ -14,17 +15,21 @@
   padding: 20px 40px;
   background-color: #fff;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .logo span {
   font-size: 24px;
   font-weight: 800;
-  color: #2563eb; /* Azul Padrão */
+  color: #2563eb;
 }
 
 .menuLinks {
   display: flex;
   gap: 30px;
+  align-items: center;
 }
 
 .menuLinks a {
@@ -38,10 +43,23 @@
   color: #2563eb;
 }
 
-.navActions {
+.navActionsDesktop {
   display: flex;
   align-items: center;
   gap: 15px;
+}
+
+.mobileActions {
+  display: none;
+}
+
+.menuIcon {
+  display: none;
+  background: none;
+  border: none;
+  color: #0f172a;
+  cursor: pointer;
+  z-index: 110;
 }
 
 .btnLink {
@@ -83,6 +101,7 @@
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.5px;
+  display: inline-block;
 }
 
 .heroSection h1 {
@@ -120,77 +139,149 @@
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
-  transition: transform 0.2s, background 0.2s;
+  transition: background 0.2s, transform 0.2s;
 }
 
 .primaryHero:hover {
   background: #1d4ed8;
   transform: translateY(-2px);
 }
+/* --- FEATURES SECTION --- */
+.featuresSection {
+  max-width: 1100px;
+  margin: 120px auto;
+  padding: 0 20px;
+}
 
-/* --- VITRINE DE NICHOS --- */
+.featuresHeader {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.sectionSubtitle {
+  color: #2563eb;
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.featuresHeader h2 {
+  font-size: 36px;
+  color: #0f172a;
+  margin: 12px 0;
+  font-weight: 800;
+}
+
+.featuresHeader p {
+  color: #64748b;
+  font-size: 18px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.featuresGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+}
+
+.featureCard {
+  background: #fff;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  transition: transform 0.2s;
+}
+
+.featureCard:hover {
+  transform: translateY(-4px);
+}
+
+.featureIcon {
+  font-size: 32px;
+  margin-bottom: 16px;
+}
+
+.featureCard h3 {
+  font-size: 20px;
+  color: #0f172a;
+  margin-bottom: 12px;
+  font-weight: 700;
+}
+
+.featureCard p {
+  color: #64748b;
+  line-height: 1.5;
+  font-size: 15px;
+}
+
+/* --- VITRINE SECTION --- */
 .vitrineSection {
-  max-width: 1200px;
-  margin: 120px auto 40px auto;
+  max-width: 1100px;
+  margin: 120px auto;
   padding: 0 20px;
 }
 
 .vitrineHeader {
   text-align: center;
-  margin-bottom: 50px;
+  margin-bottom: 60px;
 }
 
 .vitrineHeader h2 {
-  font-size: 32px;
-  font-weight: 700;
+  font-size: 36px;
   color: #0f172a;
+  font-weight: 800;
+  margin-bottom: 12px;
 }
 
 .vitrineHeader p {
   color: #64748b;
-  font-size: 16px;
-  margin-top: 10px;
+  font-size: 18px;
 }
 
 .gridNichos {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* CORRIGIDO DE '1-fraction' PARA '1fr' */
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 25px;
 }
 
 .cardNicho {
   background: #fff;
-  border-radius: 12px;
   padding: 30px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
   position: relative;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.cardNicho:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
 }
 
 .iconContainer {
-  font-size: 32px;
-  margin-bottom: 15px;
+  font-size: 28px;
+  background-color: #f1f5f9;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  margin-bottom: 20px;
 }
 
 .cardNicho h3 {
-  font-size: 20px;
+  font-size: 18px;
   color: #0f172a;
   margin-bottom: 10px;
+  font-weight: 700;
 }
 
 .cardNicho p {
-  font-size: 14px;
   color: #64748b;
+  font-size: 14px;
   line-height: 1.5;
 }
 
-/* TAGS DOS CARDS */
 .tag {
   position: absolute;
   top: 15px;
@@ -208,182 +299,625 @@
 
 .tagPremium {
   background-color: #f3e8ff;
-  color: #7c3aed;
+  color: #7e22ce;
+}
+/* --- PRICING SECTION --- */
+.pricingSection {
+  max-width: 1100px;
+  margin: 120px auto;
+  padding: 0 20px;
 }
 
-/* --- BOTÃO WHATSAPP --- */
+.pricingHeader {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.pricingHeader h2 {
+  font-size: 36px;
+  color: #0f172a;
+  font-weight: 800;
+  margin-top: 10px;
+}
+
+.pricingHeader p {
+  color: #64748b;
+  font-size: 18px;
+}
+
+.pricingGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  align-items: flex-start;
+}
+
+.priceCard {
+  background: #fff;
+  padding: 40px 30px;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer; /* Adicionado: mostra a mãozinha de clique ao passar o mouse */
+  transition: all 0.3s ease; /* Adicionado: deixa a transição de seleção suave */
+}
+
+
+/* Destaque do Plano Recomendado */
+.featuredPlan {
+  border: 2px solid #2563eb;
+  box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.15);
+  transform: scale(1.03);
+}
+
+.ribbon {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.priceCard h3 {
+  font-size: 22px;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+
+.planDescription {
+  color: #64748b;
+  font-size: 14px;
+  margin-bottom: 24px;
+  min-height: 42px;
+}
+
+.price {
+  margin-bottom: 24px;
+  display: flex;
+  align-items: baseline;
+}
+
+.currency {
+  font-size: 18px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.amount {
+  font-size: 48px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.period {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.primaryPlanBtn, .secondaryPlanBtn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 30px;
+}
+
+.primaryPlanBtn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+}
+
+.primaryPlanBtn:hover {
+  background: #1d4ed8;
+}
+
+.secondaryPlanBtn {
+  background: #fff;
+  color: #2563eb;
+  border: 1px solid #2563eb;
+}
+
+.secondaryPlanBtn:hover {
+  background: #f0f5ff;
+}
+
+.planFeatures {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.planFeatures li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  color: #475569;
+}
+
+.checkIcon {
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+.disabledFeature {
+  color: #cbd5e1 !important;
+  text-decoration: line-through;
+}
+
+/* --- COMPONENTES FIXOS --- */
 .whatsappFloat {
   position: fixed;
   bottom: 30px;
   right: 30px;
   background-color: #25d366;
-  color: white;
-  border-radius: 50px;
+  color: #fff;
   width: 60px;
   height: 60px;
+  border-radius: 50px;
   display: flex;
-  justify-content: center;
   align-items: center;
-  font-size: 30px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-  text-decoration: none;
-  z-index: 100;
-  transition: transform 0.2s;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  transition: transform 0.2s, background-color 0.2s;
 }
 
-.whatsappFloat:hover {
-  transform: scale(1.1);
+.whatsappFloat:hover { 
+  transform: scale(1.1); 
+  background-color: #128c7e; 
 }
 
-
-
-
-/* --- SEÇÃO DE FUNCIONALIDADES --- */
-.featuresSection {
-  max-width: 1200px;
-  margin: 100px auto;
-  padding: 0 20px;
+.scrollTopBtn {
+  position: fixed;
+  bottom: 30px;
+  left: 30px;
+  background-color: #0f172a;
+  color: #fff;
+  width: 50px;
+  height: 50px;
+  border-radius: 50px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
 }
 
-.featuresHeader {
-  text-align: center;
-  margin-bottom: 60px;
+.showScroll {
+  opacity: 1;
+  visibility: visible;
 }
 
-.featuresHeader span {
-  color: #2563eb;
-  font-weight: 700;
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.featuresHeader h2 {
-  font-size: 36px;
-  font-weight: 800;
-  color: #0f172a;
-  margin-top: 10px;
-  margin-bottom: 16px;
-}
-
-.featuresHeader p {
-  color: #64748b;
-  font-size: 18px;
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.featuresGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 30px;
-}
-
-.featureCard {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 32px;
-  transition: box-shadow 0.2s, transform 0.2s;
-}
-
-.featureCard:hover {
+.scrollTopBtn:hover {
+  background-color: #2563eb;
   transform: translateY(-3px);
-  box-shadow: 0 10px 30px rgba(37, 99, 235, 0.05);
 }
 
-.featureIcon {
-  font-size: 28px;
-  background-color: #eff6ff;
-  width: 56px;
-  height: 56px;
+/* --- RESPONSIVIDADE MOBILE --- */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 20px;
+  }
+
+  .navActionsDesktop {
+    display: none;
+  }
+
+  .menuIcon {
+    display: block;
+  }
+
+  /* Criação da gaveta lateral do menu mobile */
+  .menuLinks {
+    position: fixed;
+    top: 74px;
+    right: -100%;
+    width: 80%;
+    height: calc(100vh - 74px);
+    background-color: #fff;
+    flex-direction: column;
+    padding: 40px 20px;
+    gap: 25px;
+    box-shadow: -10px 10px 20px rgba(0,0,0,0.05);
+    transition: right 0.3s ease;
+    align-items: flex-start;
+    z-index: 105;
+  }
+
+  .menuOpen {
+    right: 0;
+  }
+
+  .mobileActions {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 15px;
+    margin-top: 20px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 20px;
+  }
+
+  .mobileActions button {
+    width: 100%;
+    padding: 12px;
+  }
+
+  .heroSection { 
+    margin: 60px auto; 
+  }
+  
+  .heroSection h1 { 
+    font-size: 32px; 
+  }
+  
+  .featuredPlan { 
+    transform: scale(1); 
+  }
+}
+
+
+/* --- FOOTER SECTION --- */
+.footer {
+  background-color: #0f172a;
+  color: #94a3b8;
+  padding: 60px 40px 20px 40px;
+  margin-top: 80px;
+  border-top: 1px solid #1e293b;
+}
+
+.footerContent {
+  max-width: 1100px;
+  margin: 0 auto;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  margin-bottom: 20px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 40px;
+  padding-bottom: 40px;
+  border-bottom: 1px solid #1e293b;
 }
 
-.featureCard h3 {
-  font-size: 20px;
-  font-weight: 700;
-  color: #0f172a;
-  margin-bottom: 12px;
+.footerBrand {
+  max-width: 300px;
 }
 
-.featureCard p {
-  color: #64748b;
-  font-size: 15px;
+.footerBrand span {
+  font-size: 22px;
+  font-weight: 800;
+  color: #3b82f6;
+  display: inline-block;
+  margin-bottom: 15px;
+}
+
+.footerBrand p {
+  font-size: 14px;
   line-height: 1.6;
 }
 
-/* =========================================================
-   MEDIA QUERIES: Ajustes de Responsividade para Mobile
-   ========================================================= */
+.footerLinksGrid {
+  display: flex;
+  gap: 60px;
+}
 
+.footerColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footerColumn h4 {
+  color: #f8fafc;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.footerColumn a {
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.2s;
+}
+
+.footerColumn a:hover {
+  color: #3b82f6;
+}
+
+.footerBottom {
+  max-width: 1100px;
+  margin: 20px auto 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+  font-size: 13px;
+}
+
+.footerDeveloper {
+  color: #64748b;
+}
+
+/* Ajuste fino de responsividade para o footer */
 @media (max-width: 768px) {
-  /* --- CORREÇÃO DA NAVBAR --- */
-  .navbar {
-    flex-direction: column; /* Empilha o conteúdo no celular */
-    gap: 15px;
-    padding: 15px 20px;
+  .footer {
+    padding: 40px 20px 20px 20px;
+  }
+  .footerContent {
+    flex-direction: column;
+    gap: 30px;
+  }
+  .footerLinksGrid {
+    gap: 40px;
+  }
+  .footerBottom {
+    flex-direction: column;
     text-align: center;
-  }
-
-  .menuLinks {
-    gap: 15px;
-    flex-wrap: wrap; /* Permite que os links quebrem linha se necessário */
-    justify-content: center;
-  }
-
-  .menuLinks a {
-    font-size: 14px;
-  }
-
-  .navActions {
-    width: 100%;
-    justify-content: center;
-  }
-
-  /* --- CORREÇÃO DA HERO SECTION --- */
-  .heroSection {
-    margin: 50px auto; /* Reduz o recuo superior para não sumir na tela */
-  }
-
-  .heroSection h1 {
-    font-size: 32px; /* Reduz o tamanho da fonte para não estourar a largura */
-    margin-top: 16px;
-    line-height: 1.3;
-  }
-
-  .heroSection p {
-    font-size: 16px;
-    margin-bottom: 30px;
-  }
-
-  .primaryHero {
-    width: 100%; /* Botão principal ocupa a largura total no mobile */
-    padding: 14px 28px;
-    font-size: 16px;
-  }
-
-  /* --- AJUSTES EXTRA DE SEÇÕES --- */
-  .vitrineHeader h2, .featuresHeader h2 {
-    font-size: 28px; /* Títulos de seções mais suaves */
-  }
-
-  .vitrineSection, .featuresSection {
-    margin: 60px auto; /* Aproxima as seções no mobile */
   }
 }
 
-@media (max-width: 480px) {
-  /* Para celulares bem pequenos */
-  .navbar {
-    padding: 15px 10px;
+
+
+/* --- WARRANTY SECTION --- */
+.warrantySection {
+  max-width: 1100px;
+  margin: 60px auto 100px auto;
+  padding: 0 20px;
+}
+
+.warrantyContainer {
+  background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
+  border: 1px solid #dbeafe;
+  border-radius: 20px;
+  padding: 50px;
+  display: flex;
+  align-items: center;
+  gap: 50px;
+  box-shadow: 0 10px 30px -10px rgba(37, 99, 235, 0.05);
+}
+
+.warrantyBadgeContainer {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Selo redondo imitando carimbo de garantia moderno */
+.warrantyBadge {
+  background-color: #2563eb;
+  color: #fff;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.25);
+  border: 4px solid #fff;
+  outline: 2px solid #2563eb;
+}
+
+.badgeNumber {
+  font-size: 42px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.badgeText {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+
+.warrantyTextContent {
+  flex-1: 1;
+}
+
+.warrantyTextContent h2 {
+  font-size: 32px;
+  color: #0f172a;
+  font-weight: 800;
+  margin: 8px 0 16px 0;
+}
+
+.warrantyTextContent p {
+  color: #475569;
+  font-size: 16px;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.warrantyHighlight {
+  font-weight: 600;
+  color: #1e3a8a !important; /* Azul escuro destacando o compromisso */
+}
+
+/* Responsividade da Seção de Garantia */
+@media (max-width: 768px) {
+  .warrantyContainer {
+    flex-direction: column;
+    text-align: center;
+    padding: 40px 24px;
+    gap: 30px;
   }
   
-  .menuLinks {
-    gap: 10px;
+  .warrantyTextContent h2 {
+    font-size: 26px;
+  }
+  
+  .warrantyBadge {
+    width: 110px;
+    height: 110px;
+  }
+  
+  .badgeNumber {
+    font-size: 36px;
+  }
+}
+
+
+
+/* --- FAQ SECTION --- */
+.faqSection {
+  max-width: 800px; /* FAQ fica melhor com largura mais estreita para facilitar a leitura */
+  margin: 120px auto;
+  padding: 0 20px;
+}
+
+.faqHeader {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.faqHeader h2 {
+  font-size: 36px;
+  color: #0f172a;
+  font-weight: 800;
+  margin-top: 10px;
+}
+
+.faqHeader p {
+  color: #64748b;
+  font-size: 18px;
+}
+
+.faqContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.faqItem {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.faqItem:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+}
+
+.faqQuestion {
+  width: 100%;
+  padding: 24px;
+  background: none;
+  border: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  cursor: pointer;
+  gap: 20px;
+}
+
+/* Ícone de "+" que se transforma em "-" de forma animada */
+.faqIcon {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.faqIcon::before,
+.faqIcon::after {
+  content: '';
+  position: absolute;
+  background-color: #64748b;
+  transition: transform 0.25s ease-out;
+}
+
+/* Linha horizontal do + */
+.faqIcon::before {
+  top: 7px;
+  left: 0;
+  width: 16px;
+  height: 2px;
+}
+
+/* Linha vertical do + */
+.faqIcon::after {
+  top: 0;
+  left: 7px;
+  width: 2px;
+  height: 16px;
+}
+
+/* Quando o item está aberto, a linha vertical roda e some, virando um "-" */
+.faqItemOpen .faqIcon::after {
+  transform: rotate(90deg);
+}
+.faqItemOpen .faqIcon::before {
+  transform: rotate(180deg);
+  background-color: #2563eb; /* Muda a cor do ícone para azul quando aberto */
+}
+
+.faqItemOpen {
+  border-color: #bfdbfe;
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.04);
+}
+
+/* Lógica de animação suave para revelar o texto */
+.faqAnswer {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s ease-out;
+}
+
+.faqItemOpen .faqAnswer {
+  grid-template-rows: 1fr;
+}
+
+.faqAnswerContent {
+  overflow: hidden;
+}
+
+.faqAnswerContent p {
+  padding: 0 24px 24px 24px;
+  color: #475569;
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Responsividade do FAQ */
+@media (max-width: 768px) {
+  .faqHeader h2 {
+    font-size: 28px;
+  }
+  .faqQuestion {
+    font-size: 16px;
+    padding: 20px;
+  }
+  .faqAnswerContent p {
+    padding: 0 20px 20px 20px;
+    font-size: 14px;
   }
 }

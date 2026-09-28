@@ -1,122 +1,109 @@
 .container {
-  width: 100%;
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 30px;
+  padding: 24px;
+  font-family: sans-serif;
 }
 
 .header {
-  margin-bottom: 25px;
+  margin-bottom: 24px;
 }
 
 .header h1 {
-  margin: 0;
-  font-size: 28px;
-  font-weight: 700;
-  color: #222;
+  margin: 0 0 8px;
+  color: #333;
+  font-size: 24px;
 }
 
 .header p {
-  margin-top: 8px;
-  color: #777;
+  margin: 0;
+  color: #666;
+  font-size: 14px;
 }
 
 .card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 30px;
-  box-shadow: 0 3px 15px rgba(0, 0, 0, 0.08);
+  background-color: #fff;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  max-width: 600px;
+  width: 100%;
 }
 
 .field {
+  margin-bottom: 1.2rem;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: 6px;
 }
 
 .field label {
+  font-weight: bold;
+  color: #555;
   font-size: 14px;
-  font-weight: 600;
-  color: #333;
 }
 
-.field input {
+.input {
+  padding: 10px 12px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+  outline: none;
   width: 100%;
   box-sizing: border-box;
-  padding: 12px 14px;
-  border: 1px solid #ddd;
-  border-radius: 7px;
-  font-size: 15px;
-  outline: none;
 }
 
-.field input:focus {
-  border-color: #16a34a;
+.input:focus {
+  border-color: #0070f3;
 }
 
 .actions {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  margin-top: 30px;
-}
-
-.primary,
-.secondary {
-  padding: 11px 20px;
-  border-radius: 7px;
-  font-weight: 600;
-  cursor: pointer;
+  margin-top: 1.5rem;
 }
 
 .primary {
-  border: none;
-  background: #16a34a;
+  padding: 10px 20px;
+  background-color: #0070f3;
   color: #fff;
-}
-
-.primary:hover {
-  background: #15803d;
+  border: none;
+  border-radius: 4px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
 }
 
 .primary:disabled {
-  opacity: 0.6;
+  background-color: #a0cfff;
   cursor: not-allowed;
 }
 
 .secondary {
-  background: #fff;
+  padding: 10px 20px;
+  background-color: #fff;
+  color: #555;
   border: 1px solid #ccc;
-  color: #444;
+  border-radius: 4px;
+  font-size: 15px;
+  cursor: pointer;
 }
 
 .error {
-  padding: 12px 15px;
-  border-radius: 7px;
-  background: #fee2e2;
-  color: #b91c1c;
+  background-color: #ffeef0;
+  color: #d73a49;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  border: 1px solid #ffccd1;
 }
 
 .success {
-  padding: 12px 15px;
-  border-radius: 7px;
-  background: #dcfce7;
-  color: #166534;
-}
-
-@media (max-width: 700px) {
-
-  .container {
-    padding: 20px 15px;
-  }
-
-  .actions {
-    flex-direction: column;
-  }
-
-  .primary,
-  .secondary {
-    width: 100%;
-  }
+  background-color: #e6ffed;
+  color: #28a745;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  border: 1px solid #bef5cb;
 }

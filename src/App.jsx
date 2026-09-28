@@ -1,25 +1,26 @@
+// Adicione o "useNavigate" nas importações do react-router-dom
+import { useParams, useNavigate, useLocation } from 'react-router-dom'; 
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { appointmentService } from './services/appointmentService';
 import { FaWhatsapp } from 'react-icons/fa';
+import { useAuth } from './contexts/AuthContext'; // Importando nosso contexto
 import styles from './App.module.css';
-
-// ⚠️ ID do cliente fixado simulando o usuário logado
-const CUSTOMER_ID = "6aa063fbb68397d9ee19d588"; 
 
 export default function App() {
   const { companySlug } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user, signed, logout } = useAuth(); // Pegando dados do usuário logado
   
   const [company, setCompany] = useState(null);
   const [services, setServices] = useState([]);
   const [staffList, setStaffList] = useState([]);
-  
-  // Controle de fluxo interno: 'perfil' ou 'formulario'
-  const [step, setStep] = useState('perfil');
+  const [step, setStep] = useState(
+    location.state?.returnToBooking && signed ? 'formulario' : 'perfil'
+  );
 
-  // Estados de seleção do cliente
   const [selectedService, setSelectedService] = useState('');
   const [selectedStaff, setSelectedStaff] = useState('');
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -30,13 +31,32 @@ export default function App() {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
+  function handleLogout() {
+    logout();
+    navigate(`/${companySlug}/login`);
+  }
+
+  function handleStartBooking() {
+    if (!signed) {
+      navigate(`/${companySlug}/login`, {
+        state: { returnToBooking: true }
+      });
+      return;
+    }
+
+    setStep('formulario');
+  }
+
   // 1. Carrega a Empresa pelo Slug
   useEffect(() => {
     async function loadCompany() {
       try {
         setLoadingCompany(true);
         const response = await appointmentService.getCompanyBySlug(companySlug);
-        setCompany(response.company);
+        
+        // Mapeamento compatível e seguro para ler os dados da empresa
+        const fetchedCompany = response?.company || response?.data?.company || response?.data || response;
+        setCompany(fetchedCompany);
       } catch (err) {
         setError(err.message || 'Estabelecimento não encontrado.');
       } finally {
@@ -45,6 +65,20 @@ export default function App() {
     }
     if (companySlug) loadCompany();
   }, [companySlug]);
+
+  // 🌟 ADICIONADO: BLOQUEIO E LOGOUT EM TEMPO REAL PARA AGENDAMENTO PÚBLICO (MULTITENANCY)
+  // Se o cliente estiver logado na Empresa A mas acessar a URL da Empresa B, ele é deslogado silenciosamente
+  useEffect(() => {
+    if (signed && user?.companyId && company?._id) {
+      if (user.companyId !== company._id) {
+        console.warn("Sessão inválida para esta empresa. Desconectando usuário antigo.");
+        logout(); // Limpa o estado global e o localStorage do usuário da outra empresa
+        
+        // Mantém ele na página atual, mas agora deslogado de forma limpa para poder interagir
+        setStep('perfil'); 
+      }
+    }
+  }, [company, signed, user, logout]);
 
   // 2. Carrega Serviços e Profissionais
   useEffect(() => {
@@ -95,12 +129,26 @@ export default function App() {
   }, [selectedDate, selectedStaff, selectedService, company]);
 
   async function handleBookAppointment(dateTimeIso) {
+    if (!signed) {
+      alert('Você precisa estar logado para realizar um agendamento.');
+      navigate(`/${companySlug}/login`);
+      return;
+    }
+
+    // Trava redundante de segurança no clique do agendamento
+    if (user?.companyId && company?._id && user.companyId !== company._id) {
+      alert(`Sua conta está vinculada a outro estabelecimento. Por favor, faça login com uma conta válida.`);
+      logout();
+      navigate(`/${companySlug}/login`);
+      return;
+    }
+
     if (!window.confirm('Confirmar agendamento?')) return;
     setError('');
     try {
       const response = await appointmentService.createAppointment({
         companyId: company._id,
-        customerId: CUSTOMER_ID,
+        customerId: user._id, 
         professionalId: selectedStaff,
         serviceId: selectedService,
         startTime: dateTimeIso,
@@ -124,6 +172,24 @@ export default function App() {
 
   return (
     <div className={styles.pageWrapper}>
+      <header className={styles.sessionHeader}>
+        <strong>{company?.name || 'Agendamentos'}</strong>
+
+        {signed && (
+          <div className={styles.sessionActions}>
+            <span className={styles.sessionUser}>
+              {user?.name || user?.email}
+            </span>
+            <button
+              type="button"
+              className={styles.logoutButton}
+              onClick={handleLogout}
+            >
+              Sair
+            </button>
+          </div>
+        )}
+      </header>
       
       {/* TELA 1: PERFIL */}
       {step === 'perfil' && (
@@ -149,7 +215,7 @@ export default function App() {
                     {services.slice(0, 3).map(s => (
                       <div key={s._id} className={styles.previewServiceCard}>
                         <span>{s.name}</span>
-                        <strong>R$ {s.price.toFixed(2)}</strong>
+                        <strong>R\$ {s.price.toFixed(2)}</strong>
                       </div>
                     ))}
                     {services.length > 3 && (
@@ -159,7 +225,7 @@ export default function App() {
                 </div>
               )}
 
-              <button onClick={() => setStep('formulario')} className={styles.btnActionPrimary}>
+              <button onClick={handleStartBooking} className={styles.btnActionPrimary}>
                 📅 Iniciar Agendamento
               </button>
             </div>
@@ -180,6 +246,8 @@ export default function App() {
           </div>
         </div>
       )}
+
+      
 
       {/* TELA 2: FORMULÁRIO */}
       {step === 'formulario' && (

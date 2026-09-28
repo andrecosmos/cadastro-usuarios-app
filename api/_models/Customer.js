@@ -1,10 +1,14 @@
+// src/_models/User.js
 import mongoose from 'mongoose';
 
-const CustomerSchema = new mongoose.Schema({
-  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
-  name: { type: String, required: true },
-  email: { type: String },
-  phone: { type: String, required: true } // Utilizado para envio de mensagens/lembretes futuros
+const UserSchema = new mongoose.Schema({
+  nome: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  telefone: { type: String, required: true },
+  senha: { type: String, required: true },
+  role: { type: String, enum: ['admin', 'user'], default: 'user' },
+  // 🌟 ADICIONADO: Guarda a qual estabelecimento o usuário pertence (Opcional para logins globais)
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company' }
 }, { timestamps: true });
 
-export const Customer = mongoose.models.Customer || mongoose.model('Customer', CustomerSchema);
+export const User = mongoose.models.User || mongoose.model('User', UserSchema, 'usuarios');

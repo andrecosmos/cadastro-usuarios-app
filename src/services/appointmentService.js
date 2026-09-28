@@ -1,95 +1,54 @@
 // src/services/appointmentService.js
-import { getOverlappingDaysInIntervals } from 'date-fns';
 import { api } from './api.js';
 
-export const appointmentService = {
+// Mantemos o interceptor apenas para segurança, ele não altera a estrutura dos dados
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('@App:token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+}, (error) => {
+  return Promise.reject(error);
+});
 
-   // ==========================================
+export const appointmentService = {
+  // ==========================================
   // EMPRESAS
   // ==========================================
-  // 1. Cadastra uma nova empresa parceira
-  createCompany: (companyData) => {
-    return api.post('/api/companies/create', companyData);
-  },
-
-  updateCompany: (companyId, companyData) => {
-    return api.patch('/api/companies/update', { companyId, ...companyData });
-  },
-
-  getCompanyBySlug: (slug) => {
-    return api.get(`/api/companies/get-by-slug?slug=${slug}`);
-  },
+  createCompany: (companyData) => api.post('/api/companies/create', companyData),
+  updateCompany: (companyId, companyData) => api.patch('/api/companies/update', { companyId, ...companyData }),
+  getCompanyBySlug: (slug) => api.get(`/api/companies/get-by-slug?slug=${slug}`),
 
   // ==========================================
   // SERVIÇOS
   // ==========================================
-
-
-  // 2. Cadastra um serviço para uma empresa
-  createService: (serviceData) => {
-    return api.post('/api/services/create', serviceData);
-  },
-
-  // Adicione estas duas funções dentro do objeto appointmentService existente:
-  getServicesByCompany: (companyId) => {
-    return api.get(`/api/services/list-by-company?companyId=${companyId}`);
-  },
+  createService: (serviceData) => api.post('/api/services/create', serviceData),
+  getServicesByCompany: (companyId) => api.get(`/api/services/list-by-company?companyId=${companyId}`),
 
   // ==========================================
   // AGENDAMENTOS
   // ==========================================
-
-  // 3. Busca a lista de horários livres de um profissional em um dia específico
-  getAvailableSlots: (companyId, professionalId, serviceId, date) => {
-    return api.get('/api/appointments/available-slots', {
-      params: { companyId, professionalId, serviceId, date }
-    });
-  },
-
-   getAppointments: (companyId) => {
-    return api.get('/api/appointments', {
-      params: { companyId }
-    });
-  },
-
-  // 4. Cria e fixa um novo agendamento
-  createAppointment: (appointmentData) => {
-    return api.post('/api/appointments/create', appointmentData);
-  },
-
-  // 5. Lista a agenda completa de um dia para o painel do estabelecimento
-  listAppointments: (companyId, date) => {
-    return api.get('/api/appointments/list', {
-      params: { companyId, date }
-    });
-  },
-
-   
-  // 6. Altera o status (ex: conclui ou cancela um agendamento)
-  updateStatus: (appointmentId, companyId, status) => {
-    return api.patch('/api/appointments/update-status', { appointmentId, companyId, status });
-  },
+  getAvailableSlots: (companyId, professionalId, serviceId, date) => 
+    api.get('/api/appointments/available-slots', { params: { companyId, professionalId, serviceId, date } }),
+  getAppointments: (companyId) => api.get('/api/appointments', { params: { companyId } }),
+  createAppointment: (appointmentData) => api.post('/api/appointments/create', appointmentData),
+  listAppointments: (companyId, date) => api.get('/api/appointments/list', { params: { companyId, date } }),
+  updateStatus: (appointmentId, companyId, status) => api.patch('/api/appointments/update-status', { appointmentId, companyId, status }),
 
   // ==========================================
   // PROFISSIONAIS
   // ==========================================
+  createStaff: (staffData) => api.post('/api/staff/create', staffData),
+  getStaffByCompany: (companyId) => api.get(`/api/staff/list-by-company?companyId=${companyId}`),
 
-  createStaff: (staffData) =>
-    api.post('/api/staff/create', staffData),
+  // Dentro do objeto appointmentService existente no seu src/services/appointmentService.js:
+ registerCustomer: (registerData) => api.post('/api/auth/register', registerData),
 
-
-  getStaffByCompany: (companyId) => {
-    return api.get(`/api/staff/list-by-company?companyId=${companyId}`);
-  },
    
   // ==========================================
   // CLIENTES
   // ==========================================
-
-  createCustomer: (customerData) => {
-    return api.post('/api/customers/create', customerData);
-  }
+  createCustomer: (customerData) => api.post('/api/customers/create', customerData)
 };
-
-
 

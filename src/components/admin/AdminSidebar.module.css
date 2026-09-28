@@ -14,6 +14,17 @@
   background-color: #020617; /* bg-slate-950 */
 }
 
+.headerTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.companyInfo {
+  min-width: 0;
+}
+
 .companyName {
   font-size: 0.875rem; /* text-md */
   font-weight: 700;
@@ -34,6 +45,38 @@
   display: inline-block;
   text-transform: uppercase;
   letter-spacing: 0.05em; /* tracking-wider */
+}
+
+.sessionInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #1e293b;
+}
+
+.sessionLabel {
+  color: #64748b;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sessionName {
+  overflow: hidden;
+  color: #e2e8f0;
+  font-size: 0.8125rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sessionEmail {
+  overflow: hidden;
+  color: #94a3b8;
+  font-size: 0.6875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Menu de Navegação */
@@ -83,4 +126,22 @@
   font-size: 0.75rem; /* text-xs */
   color: #64748b; /* text-slate-500 */
   text-align: center;
+}
+
+.logoutButton {
+  flex-shrink: 0;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #334155;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: #fca5a5;
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.logoutButton:hover {
+  background-color: #7f1d1d;
+  color: #ffffff;
 }

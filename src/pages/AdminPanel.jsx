@@ -178,8 +178,8 @@ export default function AdminPanel() {
                           <span className={styles.timeSub}>até {endTimeStr}</span>
                         </div>
                         <div>
-                          <h3 className={styles.customerName}>{app.customerId?.name}</h3>
-                          <p className={styles.customerPhone}>📞 {app.customerId?.phone}</p>
+                          <h3 className={styles.customerName}>{app.customerId?.nome}</h3>
+                          <p className={styles.customerPhone}>📞 {app.customerId?.telefone}</p>
                           <div className={styles.tags}>
                             <span className={styles.tagService}>🛠️ {app.serviceId?.name}</span>
                             <span className={styles.tagProfessional}>👤 Profissional: {app.professionalId?.name}</span>
