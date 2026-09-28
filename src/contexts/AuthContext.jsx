@@ -2,6 +2,11 @@ import { createContext, useState, useEffect, useContext } from 'react';
 
 const AuthContext = createContext({});
 
+// 🌟 CONFIGURAÇÃO INTELIGENTE DE URL:
+// Se estiver rodando localmente (Vite expõe import.meta.env.DEV como true), usa o localhost.
+// Se estiver rodando na Vercel (produção), usa uma string vazia '' para disparar rotas relativas.
+const API_URL = import.meta.env.DEV ? 'http://localhost:3000' : '';
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -23,9 +28,10 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // 🌟 FUNÇÃO DE LOGIN ATUALIZADA (Envia o companySlug)
+  // 🌟 FUNÇÃO DE LOGIN (URL RELATIVA EM PRODUÇÃO)
   const login = async (email, password, companySlug) => {
-    const response = await fetch(`http://localhost:3000/api/auth/login`, {
+    // Em produção, isso vai virar exatamente: fetch('/api/auth/login')
+    const response = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, companySlug }),
@@ -43,9 +49,10 @@ export function AuthProvider({ children }) {
     return data.user;
   };
 
-  // 🌟 FUNÇÃO DE CADASTRO ATUALIZADA (Declarada corretamente para sumir o erro!)
+  // 🌟 FUNÇÃO DE CADASTRO (URL RELATIVA EM PRODUÇÃO)
   const register = async (userData) => {
-    const response = await fetch(`http://localhost:3000/api/auth/register`, {
+    // Em produção, isso vai virar exatamente: fetch('/api/auth/register')
+    const response = await fetch(`${API_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(userData),
@@ -73,7 +80,6 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    /* 🌟 Incluindo 'register' aqui embaixo agora com a função existindo de verdade no código */
     <AuthContext.Provider value={{ signed: !!user, user, loading, login, logout, register }}>
       {children}
     </AuthContext.Provider>
