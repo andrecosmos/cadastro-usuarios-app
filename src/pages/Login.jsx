@@ -21,14 +21,19 @@ export default function Login() {
     setError('');
     setLoading(true);
 
-    try {
+       try {
       const loggedUser = await login(email, senha, companySlug);
       
       if (loggedUser?.role === 'admin') {
         navigate(`/${companySlug}/admin`);
       } else {
+        // 🌟 ATUALIZADO: Se o usuário veio de uma tentativa de agendamento,
+        // repassamos TODO o objeto contendo as seleções antigas de volta para a página inicial.
         navigate(`/${companySlug}`, {
-          state: { returnToBooking: location.state?.returnToBooking === true }
+          state: { 
+            restoreBooking: location.state?.fromBooking === true, // Identificador de retorno
+            ...location.state // Repassa selectedService, selectedStaff, etc.
+          }
         });
       }
     } catch (err) {
@@ -36,6 +41,7 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
+
   }
 
   return (

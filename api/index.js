@@ -11,6 +11,9 @@ import { User } from './_models/User.js';
 import cors from 'cors';
 import crypto from 'crypto';
 
+import mongoose from 'mongoose'; // 🌟 Correção para ES Modules ("type": "module")
+
+
 const app = express();
 app.use(cors()); // Libera o acesso para o seu frontend local se conectar
 app.use(express.json())
@@ -509,6 +512,79 @@ app.post('/api/auth/register', async (req, res) => {
     return res.status(500).json({ message: 'Erro ao criar conta: ' + e.message });
   }
 });
+
+
+app.get('/api/cliente/meus-agendamentos', async (req, res) => {
+  try {
+    const { customerId } = req.query;
+
+    if (!customerId || !mongoose.Types.ObjectId.isValid(customerId)) {
+      return res.status(400).json({ message: 'Identificador de cliente inválido.' });
+    }
+
+    const customerObjectId = new mongoose.Types.ObjectId(customerId);
+
+    // Busca rígida trazendo os documentos
+    const agendamentos = await Appointment.find({ customerId: customerObjectId })
+      .populate({ path: 'companyId', select: 'name slug phone logo', options: { strictPopulate: false } })
+      .populate({ path: 'serviceId', select: 'name price durationInMinutes', options: { strictPopulate: false } })
+      .populate({ path: 'professionalId', select: 'name', options: { strictPopulate: false } })
+      .lean();
+
+    console.log(`🔍 [BANCO] Encontrados no banco para este ID exatamente: ${agendamentos.length} registros.`);
+
+    // MARGEM DE SEGURANÇA VISUAL: Considera agendamentos de hoje inteiros como "Próximos" 
+    // para evitar que o fuso horário UTC da Vercel jogue o horário atual para o passado
+    const inicioDoDiaAtual = new Date();
+    inicioDoDiaAtual.setHours(0, 0, 0, 0);
+
+    const proximos = agendamentos.filter(app => app.startTime && new Date(app.startTime) >= inicioDoDiaAtual)
+      .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+      
+    const passados = agendamentos.filter(app => app.startTime && new Date(app.startTime) < inicioDoDiaAtual)
+      .sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+
+    console.log(`📊 Distribuído no Front -> Próximos: ${proximos.length} | Passados: ${passados.length}`);
+
+    return res.status(200).json({
+      success: true,
+      proximos,
+      passados
+    });
+
+  } catch (error) {
+    console.error("❌ ERRO NO ENDPOINT DE HISTÓRICO:", error);
+    return res.status(500).json({ message: 'Erro ao processar histórico.' });
+  }
+});
+
+
+
+
+// 🌟 2. ENDPOINT PARA CANCELAMENTO DAQUELE HORÁRIO
+app.delete('/api/cliente/cancelar/:id', async (req, res) => {
+  try {
+    const appointmentId = req.params.id;
+    const { customerId } = req.query;
+
+    if (!customerId) {
+      return res.status(400).json({ message: 'O identificador do cliente é obrigatório para esta ação.' });
+    }
+
+    // Trava de segurança básica: só apaga se o agendamento pertencer de fato àquele ID de cliente
+    const agendamento = await Appointment.findOneAndDelete({ _id: appointmentId, customerId });
+
+    if (!agendamento) {
+      return res.status(404).json({ message: 'Agendamento não encontrado ou permissão negada.' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Horário cancelado com sucesso!' });
+  } catch (e) {
+    return res.status(500).json({ message: 'Erro ao cancelar horário: ' + e.message });
+  }
+});
+
+
 
 
 export default app;

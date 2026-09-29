@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { appointmentService } from '../../../services/appointmentService.js';
-
-// 🌟 IMPORTANTE: Importando o padrão CSS Modules para o componente interno
 import styles from './CadastroCliente.module.css';
 
 // Função auxiliar para aplicar a máscara: (XX) XXXXX-XXXX em tempo real

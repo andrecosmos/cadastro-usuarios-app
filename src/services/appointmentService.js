@@ -26,8 +26,8 @@ export const appointmentService = {
   createService: (serviceData) => api.post('/api/services/create', serviceData),
   getServicesByCompany: (companyId) => api.get(`/api/services/list-by-company?companyId=${companyId}`),
 
-  // ==========================================
-  // AGENDAMENTOS
+    // ==========================================
+  // AGENDAMENTOS (Atualizado para envio sem middleware)
   // ==========================================
   getAvailableSlots: (companyId, professionalId, serviceId, date) => 
     api.get('/api/appointments/available-slots', { params: { companyId, professionalId, serviceId, date } }),
@@ -35,6 +35,15 @@ export const appointmentService = {
   createAppointment: (appointmentData) => api.post('/api/appointments/create', appointmentData),
   listAppointments: (companyId, date) => api.get('/api/appointments/list', { params: { companyId, date } }),
   updateStatus: (appointmentId, companyId, status) => api.patch('/api/appointments/update-status', { appointmentId, companyId, status }),
+  
+  // 🌟 ATUALIZADO: Recebe o customerId como parâmetro para enviar na URL
+  getCustomerAppointments: (customerId) => 
+    api.get('/api/cliente/meus-agendamentos', { params: { customerId } }),
+
+  // 🌟 ATUALIZADO: Passa o customerId junto no corpo (ou query) para garantir que ele só apague o dele
+  cancelAppointmentByCustomer: (appointmentId, customerId) => 
+    api.delete(`/api/cliente/cancelar/${appointmentId}`, { params: { customerId } }),
+
 
   // ==========================================
   // PROFISSIONAIS
@@ -42,13 +51,24 @@ export const appointmentService = {
   createStaff: (staffData) => api.post('/api/staff/create', staffData),
   getStaffByCompany: (companyId) => api.get(`/api/staff/list-by-company?companyId=${companyId}`),
 
-  // Dentro do objeto appointmentService existente no seu src/services/appointmentService.js:
+  // ==========================================
+  // CLIENTES
+  // ==========================================  
+  
  registerCustomer: (registerData) => api.post('/api/auth/register', registerData),
 
    
-  // ==========================================
-  // CLIENTES
-  // ==========================================
+  
   createCustomer: (customerData) => api.post('/api/customers/create', customerData)
+
+
+  
+
+
+
+
+
+
+
 };
 

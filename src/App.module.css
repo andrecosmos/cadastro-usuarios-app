@@ -406,3 +406,391 @@
     min-height: 100vh;
   }
 }
+
+
+
+/* --- HORÁRIO SELECIONADO --- */
+.btnSlot {
+  /* Mantenha o estilo padrão que você já tem para o botão, mas adicione uma transição */
+  transition: all 0.2s ease;
+}
+
+/* Quando o botão de horário ganha a classe de selecionado */
+.btnSlotSelected {
+  background-color: #2563eb !important; /* Azul da sua paleta */
+  color: #ffffff !important;
+  border-color: #2563eb !important;
+  font-weight: 700;
+  transform: scale(1.05); /* Dá um leve zoom para feedback visual */
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+/* --- CONTAINER DO BOTÃO DE CONFIRMAÇÃO --- */
+.confirmationActionContainer {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px dashed #e2e8f0;
+  animation: fadeInSlideUp 0.3s ease-out; /* Efeito suave para o botão aparecer */
+}
+
+.btnConfirmAppointment {
+  width: 100%;
+  background-color: #10b981; /* Verde esmeralda para dar ideia de sucesso/conclusão */
+  color: #fff;
+  border: none;
+  padding: 16px 24px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+  transition: all 0.2s ease;
+}
+
+.btnConfirmAppointment:hover {
+  background-color: #059669;
+  transform: translateY(-2px);
+}
+
+/* Animação para o botão surgir de baixo para cima de forma fluida */
+@keyframes fadeInSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* --- TELA DE SUCESSO --- */
+.successContainer {
+  max-width: 550px;
+  margin: 40px auto;
+  padding: 0 20px;
+  animation: scaleUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.successCard {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 40px 30px;
+  text-align: center;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
+  border: 1px solid #e2e8f0;
+}
+
+/* Círculo animado do checkmark */
+.successIconWrapper {
+  width: 80px;
+  height: 80px;
+  background-color: #ecfdf5;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px auto;
+}
+
+.successCheckmark {
+  font-size: 36px;
+  color: #10b981;
+  font-weight: bold;
+  animation: popCheckmark 0.5s ease-out 0.2s both;
+}
+
+.successBadge {
+  background-color: #d1fae5;
+  color: #065f46;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 12px;
+  border-radius: 50px;
+  letter-spacing: 1px;
+}
+
+.successCard h1 {
+  font-size: 28px;
+  color: #0f172a;
+  font-weight: 800;
+  margin: 16px 0 8px 0;
+}
+
+.successSubtitle {
+  color: #64748b;
+  font-size: 15px;
+  line-height: 1.5;
+  margin-bottom: 30px;
+}
+
+/* Design estilo Ticket de Comprovante */
+.ticketContainer {
+  background-color: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.ticketRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 15px;
+  color: #475569;
+}
+
+.ticketRow strong {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.reminderBox {
+  background-color: #fffbeb;
+  border: 1px solid #fef3c7;
+  color: #92400e;
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: left;
+  margin-bottom: 32px;
+}
+
+/* Grade de botões de ações finais */
+.successActionsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btnCalendar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  background-color: #2563eb;
+  color: #ffffff;
+  padding: 14px 20px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 15px;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+  transition: all 0.2s;
+}
+
+.btnCalendar:hover {
+  background-color: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.btnRestart {
+  background: none;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  padding: 14px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btnRestart:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+/* --- ANIMAÇÕES DE INTRODUÇÃO --- */
+@keyframes scaleUpFade {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes popCheckmark {
+  0% { transform: scale(0); opacity: 0; }
+  70% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+
+
+
+.fieldLabel {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 12px;
+}
+
+/* --- GRID DE SERVIÇOS --- */
+.servicesGridList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.serviceSelectCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.serviceSelectCard:hover {
+  border-color: #cbd5e1;
+  background-color: #f8fafc;
+}
+
+.serviceInfoLeft h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+
+.serviceInfoLeft span {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.servicePriceRight strong {
+  font-size: 16px;
+  color: #10b981; /* Verde para destacar preço */
+  font-weight: 700;
+}
+
+/* --- GRID DE PROFISSIONAIS --- */
+.staffGridList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.staffSelectCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+
+.staffSelectCard:hover {
+  border-color: #cbd5e1;
+}
+
+.staffAvatar {
+  width: 44px;
+  height: 44px;
+  background-color: #f1f5f9;
+  color: #475569;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.staffSelectCard h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+}
+
+/* --- ESTADO ATIVO GERAL (Borda Azul e Fundo Claro) --- */
+.cardActive {
+  border-color: #2563eb !important;
+  background-color: #eff6ff !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.05);
+}
+
+.cardActive .staffAvatar {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+/* --- INPUT DATA MODERNO --- */
+.modernDateInput {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 15px;
+  color: #0f172a;
+  font-family: inherit;
+  outline: none;
+  background-color: #ffffff;
+}
+
+.modernDateInput:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+
+
+
+/* --- FEEDBACK ELÁSTICO NOS CLIQUES (Efeito de App Nativo) --- */
+.serviceSelectCard:active,
+.staffSelectCard:active,
+.btnSlot:active {
+  transform: scale(0.97); /* Faz o card afundar levemente ao segurar o clique */
+  transition: transform 0.1s ease;
+}
+
+/* --- BOTÃO DE CONFIRMAÇÃO EM ESTADO DE LOADING --- */
+.btnConfirmLoading {
+  background-color: #059669 !important; /* Fica em um tom de verde mais escuro/sóbrio */
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.loadingFlex {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* Criando o círculo giratório de carregamento */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #ffffff; /* Parte visível que vai girar */
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

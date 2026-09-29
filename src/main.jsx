@@ -18,6 +18,7 @@ import CadastroUsuario from './pages/CadastroUsuario.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 import { ProtectedRoute } from './components/ProtectedRoute.jsx';
 import './index.css';
+import MinhaConta from './pages/MinhaConta.jsx'; // Importa a página de Minha Conta
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -26,11 +27,15 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Routes>
           {/* Rota da Home da plataforma */}
           <Route path="/" element={<HomePlataforma />} />
+
+         
           
           {/* Rota para tela de login com o slug da empresa */}
           <Route path="/empresa/login" element={<LoginCentral/>} /> 
           <Route path="/:companySlug/login" element={<Login />} />
           <Route path="/:companySlug/cadastro" element={<CadastroUsuario />} />
+
+          <Route path="/:companySlug/minha-conta" element={<MinhaConta />} />
           
           {/* Rota de cadastro de nova empresa */}
           <Route path="/empresa/nova" element={<CadastroEmpresa />} />
