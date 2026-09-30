@@ -21,6 +21,11 @@ import {
 } from './_middleware/auth.js';
 
 import mongoose from 'mongoose'; // 🌟 Correção para ES Modules ("type": "module")
+import {
+  formatBusinessTime,
+  getBusinessDayBounds,
+  toBusinessDateTimeIso
+} from '../shared/dateTime.js';
 
 
 const app = express();
@@ -195,16 +200,11 @@ app.get('/api/appointments/list', authenticate, requireAdmin, requireCompanyScop
 
     // Correção do filtro de data e fuso horário
     if (date) {
-      // Cria a data usando o horário local do início e fim do dia
-      const startOfDay = new Date(`${date}T00:00:00`);
-      const endOfDay = new Date(`${date}T23:59:59.999`);
-
-      // 🌟 CORREÇÃO DA SINTAXE: Operadores nativos do MongoDB (gte e lte) sem caracteres estranhos
-      queryFilter.startTime = { 
-        $gte: startOfDay, $lte: endOfDay 
+      const { start, endExclusive } = getBusinessDayBounds(date);
+      queryFilter.startTime = {
+        $gte: start,
+        $lt: endExclusive
       };
-      
-      console.log(`🔍 Filtrando agendamentos entre: ${startOfDay.toISOString()} e ${endOfDay.toISOString()}`);
     }
 
     const appointments = await Appointment.find(queryFilter)
@@ -240,13 +240,12 @@ app.get('/api/appointments/available-slots', async (req, res) => {
       return res.status(200).json({ availableSlots: [] });
     }
 
-    const startOfDay = new Date(`${date}T00:00:00.000Z`);
-    const endOfDay = new Date(`${date}T23:59:59.999Z`);
+    const { start, endExclusive } = getBusinessDayBounds(date);
 
     const existingAppointments = await Appointment.find({
       companyId,
       professionalId,
-      startTime: { $gte: startOfDay, $lte: endOfDay },
+      startTime: { $gte: start, $lt: endExclusive },
       status: { $ne: 'canceled' }
     });
 
@@ -258,15 +257,13 @@ app.get('/api/appointments/available-slots', async (req, res) => {
     const slotsFormatted = defaultHours
       .filter(time => {
         const isOccupied = existingAppointments.some(app => {
-          const appTime = new Date(app.startTime).toLocaleTimeString('pt-BR', { 
-            hour: '2-digit', minute: '2-digit', timeZone: 'UTC' 
-          });
+          const appTime = formatBusinessTime(app.startTime);
           return appTime === time;
         });
         return !isOccupied;
       })
       .map(time => {
-        const dateTimeIso = new Date(`${date}T${time}:00`).toISOString();
+        const dateTimeIso = toBusinessDateTimeIso(date, time);
         return { time, dateTimeIso };
       });
 

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { appointmentService } from '../services/appointmentService';
-import { format } from 'date-fns'; // Caso não use date-fns, pode usar tratamento de string nativo
+import { formatBusinessDate, formatBusinessTime } from '../../shared/dateTime.js';
 import styles from './MinhaConta.module.css';
 
 export default function MinhaConta() {
@@ -190,8 +190,8 @@ export default function MinhaConta() {
                       
                       if (app.startTime) {
                         try {
-                          dataExibicao = format(new Date(app.startTime), 'dd/MM/yyyy');
-                          horaExibicao = format(new Date(app.startTime), 'HH:mm');
+                          dataExibicao = formatBusinessDate(app.startTime);
+                          horaExibicao = formatBusinessTime(app.startTime);
                         } catch (e) {
                           // Fallback nativo simples caso o date-fns falhe com a string ISO
                           const d = new Date(app.startTime);
@@ -241,8 +241,8 @@ export default function MinhaConta() {
                         <div className={styles.cardHeader}>
                           <span className={styles.companyName}>🏢 {app.companyId?.name || 'Estabelecimento'}</span>
                           <div className={styles.dateTimeBadgePast}>
-                            <strong>{app.startTime ? format(new Date(app.startTime), 'HH:mm') : '00:00'}</strong>
-                            <span>{app.startTime ? format(new Date(app.startTime), 'dd/MM/yyyy') : '00/00/0000'}</span>
+                            <strong>{app.startTime ? formatBusinessTime(app.startTime) : '00:00'}</strong>
+                            <span>{app.startTime ? formatBusinessDate(app.startTime) : '00/00/0000'}</span>
                           </div>
                         </div>
                         <div className={styles.cardBody}>

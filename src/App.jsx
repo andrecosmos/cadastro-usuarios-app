@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { formatBusinessTime } from '../shared/dateTime.js';
 import { appointmentService } from './services/appointmentService';
 import { FaWhatsapp } from 'react-icons/fa';
 import { useAuth } from './contexts/AuthContext'; // Importando nosso contexto
@@ -180,7 +181,7 @@ const [submittingBooking, setSubmittingBooking] = useState(false);
         servico: services.find(s => s._id === selectedService)?.name || 'Serviço Selecionado',
         profissional: staffList.find(st => st._id === selectedStaff)?.name || 'Profissional Selecionado',
         data: selectedDate,
-        horario: format(new Date(dateTimeIso), 'HH:mm'),
+        horario: formatBusinessTime(dateTimeIso),
         duracao: services.find(s => s._id === selectedService)?.durationInMinutes || 30
       };
 
