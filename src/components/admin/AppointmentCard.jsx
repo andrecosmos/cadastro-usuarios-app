@@ -1,4 +1,4 @@
-import { formatBusinessTime } from '../../../shared/dateTime.js';
+import { formatBusinessDate, formatBusinessTime } from '../../../shared/dateTime.js';
 
 // 1. IMPORTAR OS ESTILOS MODULE
 import styles from './AppointmentCard.module.css';
@@ -47,6 +47,9 @@ export default function AppointmentCard({
 
                 {/* Horário */}
                 <div className={styles.timeBlock}>
+                    <span className={styles.timeSub}>
+                        {formatBusinessDate(startTime)}
+                    </span>
                     <span className={styles.timeMain}>
                         {formatBusinessTime(startTime)}
                     </span>

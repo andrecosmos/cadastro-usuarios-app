@@ -562,7 +562,7 @@ app.get('/api/cliente/meus-agendamentos', authenticate, requireCustomer, async (
       .populate({ path: 'professionalId', select: 'name', options: { strictPopulate: false } })
       .lean();
 
-    console.log(`🔍 [BANCO] Encontrados no banco para este ID exatamente: ${agendamentos.length} registros.`);
+    
 
     // MARGEM DE SEGURANÇA VISUAL: Considera agendamentos de hoje inteiros como "Próximos" 
     // para evitar que o fuso horário UTC da Vercel jogue o horário atual para o passado
@@ -575,7 +575,7 @@ app.get('/api/cliente/meus-agendamentos', authenticate, requireCustomer, async (
     const passados = agendamentos.filter(app => app.startTime && new Date(app.startTime) < inicioDoDiaAtual)
       .sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
 
-    console.log(`📊 Distribuído no Front -> Próximos: ${proximos.length} | Passados: ${passados.length}`);
+   
 
     return res.status(200).json({
       success: true,

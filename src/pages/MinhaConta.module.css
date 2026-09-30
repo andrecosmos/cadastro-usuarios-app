@@ -147,7 +147,7 @@
 
 .appointmentCard {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #015dd4;
   border-radius: 16px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.01);
   display: flex;
@@ -241,7 +241,7 @@
 }
 
 .btnCancel {
-  background: none;
+  background: none; 
   border: none;
   color: #e11d48;
   font-size: 13px;

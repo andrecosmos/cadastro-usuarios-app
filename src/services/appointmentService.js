@@ -27,7 +27,7 @@ export const appointmentService = {
   getServicesByCompany: (companyId) => api.get(`/api/services/list-by-company?companyId=${companyId}`),
 
     // ==========================================
-  // AGENDAMENTOS (Atualizado para envio sem middleware)
+  // AGENDAMENTOS 
   // ==========================================
   getAvailableSlots: (companyId, professionalId, serviceId, date) => 
     api.get('/api/appointments/available-slots', { params: { companyId, professionalId, serviceId, date } }),
@@ -36,14 +36,12 @@ export const appointmentService = {
   listAppointments: (companyId, date) => api.get('/api/appointments/list', { params: { companyId, date } }),
   updateStatus: (appointmentId, companyId, status) => api.patch('/api/appointments/update-status', { appointmentId, companyId, status }),
   
-  // 🌟 ATUALIZADO: Recebe o customerId como parâmetro para enviar na URL
+ 
   getCustomerAppointments: () =>
     api.get('/api/cliente/meus-agendamentos'),
 
-  // 🌟 ATUALIZADO: Passa o customerId junto no corpo (ou query) para garantir que ele só apague o dele
   cancelAppointmentByCustomer: (appointmentId) =>
     api.delete(`/api/cliente/cancelar/${appointmentId}`),
-
 
   // ==========================================
   // PROFISSIONAIS
@@ -57,9 +55,7 @@ export const appointmentService = {
   
  registerCustomer: (registerData) => api.post('/api/auth/register', registerData),
 
-   
-  
-  createCustomer: (customerData) => api.post('/api/customers/create', customerData)
+ createCustomer: (customerData) => api.post('/api/customers/create', customerData)
 
 
   
