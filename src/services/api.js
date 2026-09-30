@@ -12,6 +12,12 @@ export const api = axios.create({
 api.interceptors.response.use(
   (response) => response.data, // Já retorna o corpo da resposta limpo (sem precisar de .data em todo arquivo)
   (error) => {
+    if (error.response?.status === 401 && typeof window !== 'undefined') {
+      localStorage.removeItem('@App:token');
+      localStorage.removeItem('@App:user');
+      window.dispatchEvent(new Event('auth:expired'));
+    }
+
     // Captura a mensagem de erro customizada enviada pela nossa API na Vercel (ex: erro 409 de colisão)
     const apiErrorMessage = error.response?.data?.error || 'Ocorreu um erro na requisição.';
     return Promise.reject(new Error(apiErrorMessage));

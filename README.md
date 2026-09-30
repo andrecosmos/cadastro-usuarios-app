@@ -1,4 +1,16 @@
-# React + Vite
+# Cadastro de Usuários
+
+## Configuração do servidor
+
+Defina `MONGODB_URI` e `JWT_SECRET` no ambiente local e nas variáveis de ambiente da Vercel. Gere um segredo forte e único para cada ambiente; não use o valor de exemplo nem versione segredos reais. Tokens de acesso expiram após oito horas.
+
+No desenvolvimento local, execute `npm run dev:local` para iniciar Vite e API juntos. O servidor da API carrega as variáveis de `.env.local` e escuta na porta `5005`, usada pelo proxy do Vite. O comando encerra os dois processos se um deles parar.
+
+Cadastros e agendamentos públicos continuam sem autenticação. Operações administrativas e de conta do cliente exigem um token válido. Contas existentes com senha SHA-256 migram para bcrypt automaticamente após o próximo login bem-sucedido.
+
+Execute `npm test` para os testes do middleware de autenticação.
+
+## Interface
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

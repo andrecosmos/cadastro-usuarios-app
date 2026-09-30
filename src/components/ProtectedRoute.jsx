@@ -14,17 +14,7 @@ export function ProtectedRoute({ children, roleRequired }) {
     return <Navigate to={`/${companySlug || 'admin'}/login`} replace />;
   }
 
-  // 🌟 Trava de Segurança Crítica (Multitenancy):
-  // Impede que um Admin ou usuário de uma empresa acesse o painel administrativo de outra empresa via URL
-  if (user?.companyId && children.props?.context?.company?._id) {
-    const currentRouteCompanyId = children.props.context.company._id;
-    if (user.companyId !== currentRouteCompanyId) {
-      console.warn("Acesso bloqueado: Usuário pertence a outra empresa.");
-      return <Navigate to={`/${companySlug}/login`} replace />;
-    }
-  }
-
-  // 2. Validação da permissão/role (Admin vs User)
+  // Esta validação melhora a navegação; a API continua sendo a autoridade de acesso.
   if (roleRequired && user?.role !== roleRequired) {
     return <Navigate to={`/${companySlug}`} replace />;
   }

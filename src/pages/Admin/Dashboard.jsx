@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -7,10 +7,12 @@ import styles from './Dashboard.module.css';
 
 import { appointmentService } from '../../services/appointmentService';
 import AppointmentList from '../../components/admin/AppointmentList';
+import AppointmentFilters from './AppointmentFilters';
+import CompanySettings from './CompanySettings';
 
 export default function Dashboard() {
 
-    const { company } = useOutletContext();
+    const { company, updateCompany } = useOutletContext();
 
     /*
      * =========================================================
@@ -35,10 +37,17 @@ export default function Dashboard() {
     const [allAppointments, setAllAppointments] = useState([]);
 
     const [loadingDailyAppointments, setLoadingDailyAppointments] =
-        useState(false);
+        useState(true);
 
     const [loadingAllAppointments, setLoadingAllAppointments] =
         useState(false);
+
+    const [hasLoadedAllAppointments, setHasLoadedAllAppointments] =
+        useState(false);
+
+    const [dailyAppointmentsError, setDailyAppointmentsError] = useState('');
+
+    const [allAppointmentsError, setAllAppointmentsError] = useState('');
 
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -47,156 +56,65 @@ export default function Dashboard() {
     const [professionalFilter, setProfessionalFilter] =
         useState('all');
 
-    const [configName, setConfigName] = useState('');
-
-    const [configPhone, setConfigPhone] = useState('');
-
-    const [isSavingConfig, setIsSavingConfig] = useState(false);
-
-
-    /*
-     * =========================================================
-     * CONFIGURAÇÕES INICIAIS
-     * =========================================================
-     */
+    const companyId = company?._id;
+    const [refreshVersion, setRefreshVersion] = useState(0);
 
     useEffect(() => {
+        if (!companyId || activeMenu !== 'dashboard') return;
 
-        if (!company) return;
+        let isCurrentRequest = true;
 
-        setConfigName(company.name || '');
-        setConfigPhone(company.phone || '');
-
-    }, [company]);
-
-
-    /*
-     * =========================================================
-     * CARREGA AGENDAMENTOS DO DIA
-     * =========================================================
-     */
-
-    const loadDailyAppointments = useCallback(async () => {
-
-        if (!company?._id) return;
-
-        try {
-
-            setLoadingDailyAppointments(true);
-
-            const response =
-                await appointmentService.listAppointments(
-                    company._id,
-                    selectedDate
+        appointmentService.listAppointments(companyId, selectedDate)
+            .then((response) => {
+                if (!isCurrentRequest) return;
+                setDailyAppointments(response.data || []);
+                setDailyAppointmentsError('');
+            })
+            .catch((error) => {
+                if (!isCurrentRequest) return;
+                setDailyAppointmentsError(
+                    error.message || 'Erro ao carregar agendamentos do dia.'
                 );
+                setDailyAppointments([]);
+            })
+            .finally(() => {
+                if (isCurrentRequest) setLoadingDailyAppointments(false);
+            });
 
-            setDailyAppointments(
-                response.data || []
-            );
+        return () => {
+            isCurrentRequest = false;
+        };
+    }, [companyId, selectedDate, activeMenu, refreshVersion]);
 
-        } catch (error) {
+    useEffect(() => {
+        if (!companyId || activeMenu !== 'appointments') return;
 
-            console.error(
-                'Erro ao carregar agendamentos do dia:',
-                error
-            );
+        let isCurrentRequest = true;
 
-            setDailyAppointments([]);
-
-        } finally {
-
-            setLoadingDailyAppointments(false);
-
-        }
-
-    }, [
-        company?._id,
-        selectedDate
-    ]);
-
-
-    /*
-     * =========================================================
-     * CARREGA TODOS OS AGENDAMENTOS
-     * =========================================================
-     */
-
-    const loadAllAppointments = useCallback(async () => {
-
-        if (!company?._id) return;
-
-        try {
-
-            setLoadingAllAppointments(true);
-
-            const response =
-                await appointmentService.listAppointments(
-                    company._id,
-                    ''
+        appointmentService.listAppointments(companyId, '')
+            .then((response) => {
+                if (!isCurrentRequest) return;
+                setAllAppointments(response.data || []);
+                setAllAppointmentsError('');
+            })
+            .catch((error) => {
+                if (!isCurrentRequest) return;
+                setAllAppointmentsError(
+                    error.message || 'Erro ao carregar todos os agendamentos.'
                 );
+                setAllAppointments([]);
+            })
+            .finally(() => {
+                if (isCurrentRequest) {
+                    setLoadingAllAppointments(false);
+                    setHasLoadedAllAppointments(true);
+                }
+            });
 
-            setAllAppointments(
-                response.data || []
-            );
-
-        } catch (error) {
-
-            console.error(
-                'Erro ao carregar todos os agendamentos:',
-                error
-            );
-
-            setAllAppointments([]);
-
-        } finally {
-
-            setLoadingAllAppointments(false);
-
-        }
-
-    }, [
-        company?._id
-    ]);
-
-
-    /*
-     * =========================================================
-     * CARREGAMENTO INICIAL DO DIA
-     * =========================================================
-     */
-
-    useEffect(() => {
-
-        if (!company?._id) return;
-
-        loadDailyAppointments();
-
-    }, [
-        company?._id,
-        selectedDate,
-        loadDailyAppointments
-    ]);
-
-
-    /*
-     * =========================================================
-     * CARREGA TODOS OS AGENDAMENTOS AO ENTRAR NA ABA
-     * =========================================================
-     */
-
-    useEffect(() => {
-
-        if (!company?._id) return;
-
-        if (activeMenu !== 'appointments') return;
-
-        loadAllAppointments();
-
-    }, [
-        company?._id,
-        activeMenu,
-        loadAllAppointments
-    ]);
+        return () => {
+            isCurrentRequest = false;
+        };
+    }, [companyId, activeMenu, refreshVersion]);
 
 
     /*
@@ -225,23 +143,19 @@ export default function Dashboard() {
 
             await appointmentService.updateStatus(
                 appointmentId,
-                company._id,
+                companyId,
                 newStatus
             );
 
-            /*
-             * Atualiza a lista correta depois da alteração.
-             */
-
             if (activeMenu === 'dashboard') {
-
-                await loadDailyAppointments();
-
+                setLoadingDailyAppointments(true);
+                setDailyAppointmentsError('');
             } else if (activeMenu === 'appointments') {
-
-                await loadAllAppointments();
-
+                setLoadingAllAppointments(true);
+                setAllAppointmentsError('');
             }
+
+            setRefreshVersion((version) => version + 1);
 
         } catch (error) {
 
@@ -249,56 +163,6 @@ export default function Dashboard() {
                 error.message ||
                 'Erro ao atualizar status.'
             );
-
-        }
-
-    }
-
-
-    /*
-     * =========================================================
-     * CONFIGURAÇÕES DA EMPRESA
-     * =========================================================
-     */
-
-    async function handleSaveSettings(event) {
-
-        event.preventDefault();
-
-        if (!company?._id) {
-
-            alert('Empresa não carregada.');
-
-            return;
-
-        }
-
-        try {
-
-            setIsSavingConfig(true);
-
-            await appointmentService.updateCompany(
-                company._id,
-                {
-                    name: configName,
-                    phone: configPhone
-                }
-            );
-
-            alert(
-                'Configurações atualizadas com sucesso!'
-            );
-
-        } catch (error) {
-
-            alert(
-                error.message ||
-                'Erro ao salvar configurações.'
-            );
-
-        } finally {
-
-            setIsSavingConfig(false);
 
         }
 
@@ -328,8 +192,13 @@ export default function Dashboard() {
 
     const currentLoading =
         activeMenu === 'appointments'
-            ? loadingAllAppointments
+            ? loadingAllAppointments || !hasLoadedAllAppointments
             : loadingDailyAppointments;
+
+    const currentError =
+        activeMenu === 'appointments'
+            ? allAppointmentsError
+            : dailyAppointmentsError;
 
 
     /*
@@ -492,72 +361,21 @@ export default function Dashboard() {
             ================================================= */}
 
             <div className={styles.metricsGrid}>
-
-                <div className={styles.metricCard}>
-
-                    <p className={styles.metricLabel}>
-                        Total
-                    </p>
-
-                    <p
-                        className={`${styles.metricValue} ${styles.textTotal}`}
-                    >
-                        {metrics.total}
-                    </p>
-
-                </div>
-
-
-                <div className={styles.metricCard}>
-
-                    <p
-                        className={`${styles.metricLabel} ${styles.textPending}`}
-                    >
-                        Pendentes
-                    </p>
-
-                    <p
-                        className={`${styles.metricValue} ${styles.textPending}`}
-                    >
-                        {metrics.pending}
-                    </p>
-
-                </div>
-
-
-                <div className={styles.metricCard}>
-
-                    <p
-                        className={`${styles.metricLabel} ${styles.textCompleted}`}
-                    >
-                        Concluídos
-                    </p>
-
-                    <p
-                        className={`${styles.metricValue} ${styles.textCompleted}`}
-                    >
-                        {metrics.completed}
-                    </p>
-
-                </div>
-
-
-                <div className={styles.metricCard}>
-
-                    <p
-                        className={`${styles.metricLabel} ${styles.textCanceled}`}
-                    >
-                        Cancelados
-                    </p>
-
-                    <p
-                        className={`${styles.metricValue} ${styles.textCanceled}`}
-                    >
-                        {metrics.canceled}
-                    </p>
-
-                </div>
-
+                {[
+                    { key: 'total', label: 'Total', value: metrics.total, tone: styles.textTotal },
+                    { key: 'pending', label: 'Pendentes', value: metrics.pending, tone: styles.textPending },
+                    { key: 'completed', label: 'Concluídos', value: metrics.completed, tone: styles.textCompleted },
+                    { key: 'canceled', label: 'Cancelados', value: metrics.canceled, tone: styles.textCanceled }
+                ].map((metric) => (
+                    <div className={styles.metricCard} key={metric.key}>
+                        <p className={`${styles.metricLabel} ${metric.tone}`}>
+                            {metric.label}
+                        </p>
+                        <p className={`${styles.metricValue} ${metric.tone}`}>
+                            {metric.value}
+                        </p>
+                    </div>
+                ))}
             </div>
 
 
@@ -571,9 +389,11 @@ export default function Dashboard() {
 
                     <button
                         type="button"
-                        onClick={() =>
+                        onClick={() => {
+                            setLoadingDailyAppointments(true);
+                            setDailyAppointmentsError('');
                             setActiveMenu('dashboard')
-                        }
+                        }}
                         className={`${styles.menuBtn} ${
                             activeMenu === 'dashboard'
                                 ? styles.menuBtnActive
@@ -586,9 +406,11 @@ export default function Dashboard() {
 
                     <button
                         type="button"
-                        onClick={() =>
+                        onClick={() => {
+                            setLoadingAllAppointments(true);
+                            setAllAppointmentsError('');
                             setActiveMenu('appointments')
-                        }
+                        }}
                         className={`${styles.menuBtn} ${
                             activeMenu === 'appointments'
                                 ? styles.menuBtnActive
@@ -663,11 +485,11 @@ export default function Dashboard() {
                             <input
                                 type="date"
                                 value={selectedDate}
-                                onChange={(event) =>
-                                    setSelectedDate(
-                                        event.target.value
-                                    )
-                                }
+                                onChange={(event) => {
+                                    setLoadingDailyAppointments(true);
+                                    setDailyAppointmentsError('');
+                                    setSelectedDate(event.target.value);
+                                }}
                                 className={styles.dateInput}
                             />
 
@@ -676,82 +498,15 @@ export default function Dashboard() {
                     </div>
 
 
-                    {/* FILTROS */}
-
-                    <div className={styles.filtersGrid}>
-
-                        <input
-                            type="text"
-                            placeholder="Buscar por cliente ou telefone..."
-                            value={searchTerm}
-                            onChange={(event) =>
-                                setSearchTerm(
-                                    event.target.value
-                                )
-                            }
-                            className={styles.searchInput}
-                        />
-
-
-                        <select
-                            value={statusFilter}
-                            onChange={(event) =>
-                                setStatusFilter(
-                                    event.target.value
-                                )
-                            }
-                            className={styles.filterSelect}
-                        >
-
-                            <option value="all">
-                                Todos os Status
-                            </option>
-
-                            <option value="pending">
-                                Pendentes
-                            </option>
-
-                            <option value="completed">
-                                Concluídos
-                            </option>
-
-                            <option value="canceled">
-                                Cancelados
-                            </option>
-
-                        </select>
-
-
-                        <select
-                            value={professionalFilter}
-                            onChange={(event) =>
-                                setProfessionalFilter(
-                                    event.target.value
-                                )
-                            }
-                            className={styles.filterSelect}
-                        >
-
-                            <option value="all">
-                                Todos os Profissionais
-                            </option>
-
-                            {professionalsList.map(
-                                professional => (
-
-                                    <option
-                                        key={professional}
-                                        value={professional}
-                                    >
-                                        {professional}
-                                    </option>
-
-                                )
-                            )}
-
-                        </select>
-
-                    </div>
+                    <AppointmentFilters
+                        searchTerm={searchTerm}
+                        onSearchChange={setSearchTerm}
+                        statusFilter={statusFilter}
+                        onStatusChange={setStatusFilter}
+                        professionalFilter={professionalFilter}
+                        onProfessionalChange={setProfessionalFilter}
+                        professionals={professionalsList}
+                    />
 
 
                     {/* LISTA */}
@@ -759,6 +514,7 @@ export default function Dashboard() {
                     <AppointmentList
                         appointments={filteredAppointments}
                         loading={currentLoading}
+                        error={currentError}
                         onStatusChange={handleStatusChange}
                     />
 
@@ -792,82 +548,15 @@ export default function Dashboard() {
                     </div>
 
 
-                    {/* FILTROS */}
-
-                    <div className={styles.filtersGrid}>
-
-                        <input
-                            type="text"
-                            placeholder="Buscar por cliente ou telefone..."
-                            value={searchTerm}
-                            onChange={(event) =>
-                                setSearchTerm(
-                                    event.target.value
-                                )
-                            }
-                            className={styles.searchInput}
-                        />
-
-
-                        <select
-                            value={statusFilter}
-                            onChange={(event) =>
-                                setStatusFilter(
-                                    event.target.value
-                                )
-                            }
-                            className={styles.filterSelect}
-                        >
-
-                            <option value="all">
-                                Todos os Status
-                            </option>
-
-                            <option value="pending">
-                                Pendentes
-                            </option>
-
-                            <option value="completed">
-                                Concluídos
-                            </option>
-
-                            <option value="canceled">
-                                Cancelados
-                            </option>
-
-                        </select>
-
-
-                        <select
-                            value={professionalFilter}
-                            onChange={(event) =>
-                                setProfessionalFilter(
-                                    event.target.value
-                                )
-                            }
-                            className={styles.filterSelect}
-                        >
-
-                            <option value="all">
-                                Todos os Profissionais
-                            </option>
-
-                            {professionalsList.map(
-                                professional => (
-
-                                    <option
-                                        key={professional}
-                                        value={professional}
-                                    >
-                                        {professional}
-                                    </option>
-
-                                )
-                            )}
-
-                        </select>
-
-                    </div>
+                    <AppointmentFilters
+                        searchTerm={searchTerm}
+                        onSearchChange={setSearchTerm}
+                        statusFilter={statusFilter}
+                        onStatusChange={setStatusFilter}
+                        professionalFilter={professionalFilter}
+                        onProfessionalChange={setProfessionalFilter}
+                        professionals={professionalsList}
+                    />
 
 
                     {/* LISTA */}
@@ -875,6 +564,7 @@ export default function Dashboard() {
                     <AppointmentList
                         appointments={filteredAppointments}
                         loading={currentLoading}
+                        error={currentError}
                         onStatusChange={handleStatusChange}
                     />
 
@@ -888,93 +578,7 @@ export default function Dashboard() {
             ================================================= */}
 
             {activeMenu === 'settings' && (
-
-                <section>
-
-                    <div className={styles.settingsCard}>
-
-                        <h2
-                            className={styles.settingsTitle}
-                        >
-                            Configurações da Empresa
-                        </h2>
-
-                        <p
-                            className={styles.settingsSubtitle}
-                        >
-                            Atualize os dados públicos do estabelecimento.
-                        </p>
-
-
-                        <form
-                            onSubmit={handleSaveSettings}
-                            className={styles.formContainer}
-                        >
-
-                            <div className={styles.formGroup}>
-
-                                <label
-                                    className={styles.formLabel}
-                                >
-                                    Nome do estabelecimento
-                                </label>
-
-                                <input
-                                    type="text"
-                                    required
-                                    value={configName}
-                                    onChange={(event) =>
-                                        setConfigName(
-                                            event.target.value
-                                        )
-                                    }
-                                    className={styles.formInput}
-                                />
-
-                            </div>
-
-
-                            <div className={styles.formGroup}>
-
-                                <label
-                                    className={styles.formLabel}
-                                >
-                                    Telefone comercial
-                                </label>
-
-                                <input
-                                    type="text"
-                                    required
-                                    value={configPhone}
-                                    onChange={(event) =>
-                                        setConfigPhone(
-                                            event.target.value
-                                        )
-                                    }
-                                    className={styles.formInput}
-                                />
-
-                            </div>
-
-
-                            <button
-                                type="submit"
-                                disabled={isSavingConfig}
-                                className={styles.btnSubmit}
-                            >
-
-                                {isSavingConfig
-                                    ? 'Salvando...'
-                                    : 'Salvar Alterações'}
-
-                            </button>
-
-                        </form>
-
-                    </div>
-
-                </section>
-
+                <CompanySettings company={company} onUpdated={updateCompany} />
             )}
 
         </div>

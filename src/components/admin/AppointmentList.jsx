@@ -6,6 +6,7 @@ import styles from './AppointmentList.module.css';
 export default function AppointmentList({
     appointments,
     loading,
+    error,
     onStatusChange
 }) {
 
@@ -13,6 +14,14 @@ export default function AppointmentList({
         return (
             <div className={styles.alertCard}>
                 Carregando agendamentos...
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className={styles.alertCard} role="alert">
+                {error}
             </div>
         );
     }

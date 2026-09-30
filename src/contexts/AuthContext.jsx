@@ -8,24 +8,31 @@ const AuthContext = createContext({});
 const API_URL = import.meta.env.DEV ? 'http://localhost:3000' : '';
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
+  const [user, setUser] = useState(() => {
     try {
       const storedUser = localStorage.getItem('@App:user');
       const storedToken = localStorage.getItem('@App:token');
 
       if (storedUser && storedToken) {
-        setUser(JSON.parse(storedUser));
+        return JSON.parse(storedUser);
       }
     } catch (error) {
       console.error("Erro ao ler dados do localStorage:", error);
       localStorage.removeItem('@App:user');
       localStorage.removeItem('@App:token');
-    } finally {
-      setLoading(false); 
     }
+
+    return null;
+  });
+  const loading = false;
+
+  useEffect(() => {
+    function handleExpiredSession() {
+      setUser(null);
+    }
+
+    window.addEventListener('auth:expired', handleExpiredSession);
+    return () => window.removeEventListener('auth:expired', handleExpiredSession);
   }, []);
 
   // 🌟 FUNÇÃO DE LOGIN (URL RELATIVA EM PRODUÇÃO)
@@ -86,6 +93,7 @@ export function AuthProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   return useContext(AuthContext);
 }

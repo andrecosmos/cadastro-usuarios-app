@@ -128,7 +128,7 @@ export default function MinhaConta() {
           onClick={() => navigate(companySlug ? `/${companySlug}` : '/')}
           style={{ cursor: 'pointer' }}
         >
-          <span>AGENDA</span>
+          <span>JÁRESERVA</span>
           <small>Área do Cliente</small>
         </div>
         

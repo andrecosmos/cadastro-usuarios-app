@@ -50,8 +50,8 @@ function HomePlataforma() {
     <div className={styles.wrapper}>
       {/* 1. CABEÇALHO (NAVBAR) */}
       <header className={styles.navbar}>
-        <div className={styles.logo} onClick={scrollToTop} style={{ cursor: 'pointer' }}>
-          <span>AGENDA</span>
+        <div className={styles.logo} onClick={() => navigate(`/`)} style={{ cursor: 'pointer' }}>
+          <span>JÁRESERVA</span>
         </div>
 
         {/* Links de navegação - ganham a classe 'menuOpen' se o menu mobile estiver ativo */}
@@ -212,7 +212,7 @@ function HomePlataforma() {
                 navigate('/empresa/nova');
               }}
             >
-              Começar Grátis
+              Experimentar Grátis (7 dias)
             </button>
             <ul className={styles.planFeatures}>
               <li><FaCheck className={styles.checkIcon} /> Até 50 agendamentos/mês</li>
@@ -276,7 +276,7 @@ function HomePlataforma() {
                 navigate('/empresa/nova');
               }}
             >
-              Falar com Consultor
+              Experimentar Grátis (7 dias)
             </button>
             <ul className={styles.planFeatures}>
               <li><FaCheck className={styles.checkIcon} /> Profissionais Ilimitados</li>
@@ -377,7 +377,7 @@ function HomePlataforma() {
       <footer className={styles.footer}>
         <div className={styles.footerContent}>
           <div className={styles.footerBrand}>
-            <span>AGENDA</span>
+            <span>JÁRESERVA</span>
             <p>A tecnologia que impulsiona o crescimento do seu negócio local.</p>
           </div>
           
@@ -398,7 +398,7 @@ function HomePlataforma() {
         </div>
         
         <div className={styles.footerBottom}>
-          <p>&copy; {new Date().getFullYear()} AGENDA. Todos os direitos reservados.</p>
+          <p>&copy; {new Date().getFullYear()} JÁRESERVA. Todos os direitos reservados.</p>
           <p className={styles.footerDeveloper}>Feito com ⚡ focado em alta conversão.</p>
         </div>
       </footer>

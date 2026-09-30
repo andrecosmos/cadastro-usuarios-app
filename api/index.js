@@ -10,6 +10,15 @@ import { Staff } from './_models/Staff.js';
 import { User } from './_models/User.js';
 import cors from 'cors';
 import crypto from 'crypto';
+import { Buffer } from 'node:buffer';
+import bcrypt from 'bcryptjs';
+import {
+  authenticate,
+  createAccessToken,
+  requireAdmin,
+  requireCompanyScope,
+  requireCustomer
+} from './_middleware/auth.js';
 
 import mongoose from 'mongoose'; // 🌟 Correção para ES Modules ("type": "module")
 
@@ -33,6 +42,30 @@ app.use(async (req, res, next) => {
 function gerarSenhaCriptografada(senhaTextoPuro) {
   if (!senhaTextoPuro) return '';
   return crypto.createHash('sha256').update(senhaTextoPuro).digest('hex');
+}
+
+async function hashPassword(password) {
+  return bcrypt.hash(password, 12);
+}
+
+async function verifyAndUpgradePassword(user, password) {
+  const storedPassword = user.senha || '';
+
+  if (/^\$2[aby]\$/.test(storedPassword)) {
+    return bcrypt.compare(password, storedPassword);
+  }
+
+  const legacyHash = gerarSenhaCriptografada(password);
+  const providedBuffer = Buffer.from(legacyHash);
+  const storedBuffer = Buffer.from(storedPassword);
+  const matches = providedBuffer.length === storedBuffer.length &&
+    crypto.timingSafeEqual(providedBuffer, storedBuffer);
+
+  if (!matches) return false;
+
+  const upgradedHash = await hashPassword(password);
+  await User.updateOne({ _id: user._id }, { $set: { senha: upgradedHash } });
+  return true;
 }
 
 
@@ -71,10 +104,10 @@ app.get('/api/companies/get-by-slug', async (req, res) => {
   } catch (e) { return res.status(500).json({ error: e.message }); }
 });
 
-app.patch('/api/companies/update', async (req, res) => {
+app.patch('/api/companies/update', authenticate, requireAdmin, requireCompanyScope, async (req, res) => {
   try {
-    const { companyId, name, phone } = req.body;
-    if (!companyId) return res.status(400).json({ error: 'companyId obrigatório.' });
+    const { name, phone } = req.body;
+    const companyId = req.auth.companyId;
 
     const updateData = {};
     if (name) updateData.name = name;
@@ -98,9 +131,10 @@ app.patch('/api/companies/update', async (req, res) => {
 // ==========================================
 // ROTA: CADASTRAR CLIENTE PELO PAINEL ADMIN (BLINDADA)
 // ==========================================
-app.post('/api/customers/create', async (req, res) => {
+app.post('/api/customers/create', authenticate, requireAdmin, requireCompanyScope, async (req, res) => {
   try {
-    const { companyId, nome, email, telefone } = req.body;
+    const { nome, email, telefone } = req.body;
+    const companyId = req.auth.companyId;
 
     // Log para ver exatamente o que o admin disparou da tela
     console.log("➡️ DISPARO DE CRIAÇÃO DE CLIENTE ADMIN:", req.body);
@@ -118,7 +152,7 @@ app.post('/api/customers/create', async (req, res) => {
     }
 
     const senhaInicial = telefone.replace(/\D/g, ''); // Ex: "11993001129"
-    const senhaInicialCriptografada = gerarSenhaCriptografada(senhaInicial);
+    const senhaInicialCriptografada = await hashPassword(senhaInicial);
 
     // 🌟 FORÇANDO A CRIAÇÃO DE UM DOCUMENTO INSTANCIADO
     const novoClienteDoc = new User({
@@ -152,10 +186,10 @@ app.post('/api/customers/create', async (req, res) => {
 // ==========================================
 // ROTAS: APPOINTMENTS (LISTAGEM FILTRADA POR DATA CORRIGIDA)
 // ==========================================
-app.get('/api/appointments/list', async (req, res) => {
+app.get('/api/appointments/list', authenticate, requireAdmin, requireCompanyScope, async (req, res) => {
   try {
-    const { companyId, date } = req.query;
-    if (!companyId) return res.status(400).json({ error: 'companyId obrigatório.' });
+    const { date } = req.query;
+    const companyId = req.auth.companyId;
 
     let queryFilter = { companyId };
 
@@ -240,7 +274,7 @@ app.get('/api/appointments/available-slots', async (req, res) => {
       success: true,
       availableSlots: slotsFormatted
     });
-  } catch (error) {
+  } catch {
     return res.status(200).json({ availableSlots: [] });
   }
 });
@@ -286,12 +320,19 @@ app.post('/api/appointments/create', async (req, res) => {
 // ==========================================
 // ROTAS: UPDATE STATUS (PATCH - EXATAMENTE COMO SEU SERVICE ACESSA)
 // ==========================================
-app.patch('/api/appointments/update-status', async (req, res) => {
+app.patch('/api/appointments/update-status', authenticate, requireAdmin, requireCompanyScope, async (req, res) => {
   try {
     const { appointmentId, status } = req.body;
     if (!appointmentId || !status) return res.status(400).json({ error: 'Campos ausentes.' });
+    if (!['pending', 'completed', 'canceled'].includes(status)) {
+      return res.status(400).json({ error: 'Status inválido.' });
+    }
 
-    const updated = await Appointment.findByIdAndUpdate(appointmentId, { status }, { new: true });
+    const updated = await Appointment.findOneAndUpdate(
+      { _id: appointmentId, companyId: req.auth.companyId },
+      { status },
+      { new: true, runValidators: true }
+    );
     if (!updated) return res.status(404).json({ error: 'Não encontrado.' });
     return res.status(200).json({ success: true, data: updated });
   } catch (e) { return res.status(500).json({ error: e.message }); }
@@ -305,7 +346,7 @@ app.get('/api/staff/list-by-company', async (req, res) => {
     const { companyId } = req.query;
     const staffList = await Staff.find({ companyId, isActive: true }).populate('specialties');
     return res.status(200).json({ success: true, staff: staffList });
-  } catch (e) { return res.status(200).json({ staff: [] }); }
+  } catch { return res.status(200).json({ staff: [] }); }
 });
 
 //app.get('/api/services/list-by-company', async (req, res) => {
@@ -340,10 +381,11 @@ app.get('/api/services/list-by-company', async (req, res) => {
 });
 
 
-app.post('/api/services/create', async (req, res) => {
+app.post('/api/services/create', authenticate, requireAdmin, requireCompanyScope, async (req, res) => {
   try {
-    const { companyId, name, description, durationInMinutes, price } = req.body;
-    if (!companyId || !name || !durationInMinutes) {
+    const { name, description, durationInMinutes, price } = req.body;
+    const companyId = req.auth.companyId;
+    if (!name || !durationInMinutes) {
       return res.status(400).json({ error: 'Empresa, nome e duração são obrigatórios.' });
     }
 
@@ -363,11 +405,12 @@ app.post('/api/services/create', async (req, res) => {
 // ==========================================
 // ROTA: CRIAR PROFISSIONAL (STAFF)
 // ==========================================
-app.post('/api/staff/create', async (req, res) => {
+app.post('/api/staff/create', authenticate, requireAdmin, requireCompanyScope, async (req, res) => {
   try {
-    const { companyId, name, email, specialties } = req.body;
+    const { name, email, specialties } = req.body;
+    const companyId = req.auth.companyId;
 
-    if (!companyId || !name) {
+    if (!name) {
       return res.status(400).json({ error: 'Empresa e nome do profissional são obrigatórios.' });
     }
 
@@ -391,9 +434,7 @@ app.post('/api/staff/create', async (req, res) => {
 
 
 // ==========================================
-// ROTA DE AUTENTICAÇÃO COM USUÁRIO FANTASMA
-// ==========================================
-// ROTA DE LOGIN PROTEGIDA COM ISOLAMENTO (MULTITENANCY)
+// ROTA DE LOGIN COM ISOLAMENTO POR EMPRESA
 // ==========================================
 app.post('/api/auth/login', async (req, res) => {
   try {
@@ -402,15 +443,6 @@ app.post('/api/auth/login', async (req, res) => {
 
     if (!email || !password) {
       return res.status(400).json({ message: 'E-mail e senha são obrigatórios.' });
-    }
-
-    // 1. IGNORA FILTRO SE FOR O USUÁRIO FANTASMA ADMINISTRATIVO GLOBAL
-    if (email === 'teste@admin.com' && password === '123456') {
-      return res.status(200).json({
-        success: true,
-        token: `mock-token-fantasma-${Date.now()}`,
-        user: { _id: "6aa063fbb68397d9ee19d588", name: "Admin Global", email, role: "admin", companySlug: "admin-global" }
-      });
     }
 
     let usuario = null;
@@ -449,25 +481,30 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     // 4. VERIFICAÇÃO DE SENHA (Igual para ambos os fluxos)
-    const senhaDigitadaHash = gerarSenhaCriptografada(password);
-
-    if (usuario.senha !== senhaDigitadaHash) {
+    if (!(await verifyAndUpgradePassword(usuario, password))) {
       return res.status(401).json({ message: 'E-mail ou senha incorretos.' });
     }
 
-    // 5. RETORNA DADOS COM SUCESSO INJETANDO O SLUG RESOLVIDO
+    const token = createAccessToken(usuario);
+
     return res.status(200).json({
       success: true,
-      token: `mock-token-${usuario._id}-${Date.now()}`,
+      token,
       user: {
-        ...usuario,
+        _id: String(usuario._id),
         name: usuario.nome, // Garante compatibilidade de chaves com o front
+        email: usuario.email,
+        companyId: String(usuario.companyId),
+        role: usuario.role,
         companySlug: slugResolvido // 🌟 Crucial para o React saber para onde redirecionar!
       }
     });
 
   } catch (e) {
-    return res.status(500).json({ message: 'Erro interno no servidor: ' + e.message });
+    if (e.message.startsWith('JWT_SECRET')) {
+      return res.status(500).json({ message: 'Autenticação não configurada no servidor.' });
+    }
+    return res.status(500).json({ message: 'Erro interno no servidor.' });
   }
 });
 
@@ -488,8 +525,7 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ message: 'Este e-mail já está cadastrado neste estabelecimento.' });
     }
 
-    // 🌟 CRIPTOGRAFIA ATIVADA: Transforma a senha em hash antes de salvar
-    const senhaCriptografada = gerarSenhaCriptografada(senha);
+    const senhaCriptografada = await hashPassword(senha);
 
     const novoUsuario = await User.create({
       companyId,
@@ -500,7 +536,7 @@ app.post('/api/auth/register', async (req, res) => {
       role: 'user'
     });
 
-    const token = `mock-token-${novoUsuario._id}-${Date.now()}`;
+    const token = createAccessToken(novoUsuario);
 
     return res.status(201).json({
       success: true,
@@ -514,15 +550,13 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 
-app.get('/api/cliente/meus-agendamentos', async (req, res) => {
+app.get('/api/cliente/meus-agendamentos', authenticate, requireCustomer, async (req, res) => {
   try {
-    const { customerId } = req.query;
-
-    if (!customerId || !mongoose.Types.ObjectId.isValid(customerId)) {
-      return res.status(400).json({ message: 'Identificador de cliente inválido.' });
+    if (!mongoose.Types.ObjectId.isValid(req.auth.userId)) {
+      return res.status(401).json({ message: 'Identidade de cliente inválida.' });
     }
 
-    const customerObjectId = new mongoose.Types.ObjectId(customerId);
+    const customerObjectId = new mongoose.Types.ObjectId(req.auth.userId);
 
     // Busca rígida trazendo os documentos
     const agendamentos = await Appointment.find({ customerId: customerObjectId })
@@ -562,17 +596,14 @@ app.get('/api/cliente/meus-agendamentos', async (req, res) => {
 
 
 // 🌟 2. ENDPOINT PARA CANCELAMENTO DAQUELE HORÁRIO
-app.delete('/api/cliente/cancelar/:id', async (req, res) => {
+app.delete('/api/cliente/cancelar/:id', authenticate, requireCustomer, async (req, res) => {
   try {
     const appointmentId = req.params.id;
-    const { customerId } = req.query;
 
-    if (!customerId) {
-      return res.status(400).json({ message: 'O identificador do cliente é obrigatório para esta ação.' });
-    }
-
-    // Trava de segurança básica: só apaga se o agendamento pertencer de fato àquele ID de cliente
-    const agendamento = await Appointment.findOneAndDelete({ _id: appointmentId, customerId });
+    const agendamento = await Appointment.findOneAndDelete({
+      _id: appointmentId,
+      customerId: req.auth.userId
+    });
 
     if (!agendamento) {
       return res.status(404).json({ message: 'Agendamento não encontrado ou permissão negada.' });

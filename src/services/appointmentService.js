@@ -37,12 +37,12 @@ export const appointmentService = {
   updateStatus: (appointmentId, companyId, status) => api.patch('/api/appointments/update-status', { appointmentId, companyId, status }),
   
   // 🌟 ATUALIZADO: Recebe o customerId como parâmetro para enviar na URL
-  getCustomerAppointments: (customerId) => 
-    api.get('/api/cliente/meus-agendamentos', { params: { customerId } }),
+  getCustomerAppointments: () =>
+    api.get('/api/cliente/meus-agendamentos'),
 
   // 🌟 ATUALIZADO: Passa o customerId junto no corpo (ou query) para garantir que ele só apague o dele
-  cancelAppointmentByCustomer: (appointmentId, customerId) => 
-    api.delete(`/api/cliente/cancelar/${appointmentId}`, { params: { customerId } }),
+  cancelAppointmentByCustomer: (appointmentId) =>
+    api.delete(`/api/cliente/cancelar/${appointmentId}`),
 
 
   // ==========================================

@@ -17,7 +17,7 @@ export default function AdminLayout() {
 
     const [company, setCompany] = useState(null);
 
-    const [loading, setLoading] = useState(true);
+    const [loadedCompanySlug, setLoadedCompanySlug] = useState(null);
 
     const [error, setError] = useState('');
 
@@ -31,63 +31,46 @@ export default function AdminLayout() {
      */
 
     useEffect(() => {
+        let isCurrentRequest = true;
 
         async function loadCompany() {
-
             try {
-
-                setLoading(true);
-
-                setError('');
-
-                const response =
-                    await appointmentService.getCompanyBySlug(
-                        companySlug
-                    );
-
-                // 🌟 Mapeamento resiliente do ID para garantir compatibilidade com o Axios
+                const response = await appointmentService.getCompanyBySlug(companySlug);
                 const fetchedCompany = response?.company || response?.data?.company || response?.data || response;
-                
+
+                if (!isCurrentRequest) return;
+
                 if (!fetchedCompany) {
                     setError('Empresa não encontrada.');
+                    setLoadedCompanySlug(companySlug);
                     return;
                 }
 
-                // 🛡️ TRAVA DE SEGURANÇA CRÍTICA:
-                // Se o usuário estiver logado, mas o companyId do token for diferente do ID da empresa da URL, expulsa
-                if (user && user.companyId && fetchedCompany._id && user.companyId !== fetchedCompany._id) {
-                    alert("Acesso negado: Você não tem permissão para gerenciar este estabelecimento.");
-                    logout(); // Limpa os dados do localStorage por segurança
+                if (user?.companyId && fetchedCompany._id && user.companyId !== fetchedCompany._id) {
+                    logout();
                     navigate(`/${companySlug}/login`, { replace: true });
                     return;
                 }
 
                 setCompany(fetchedCompany);
-
+                setError('');
+                setLoadedCompanySlug(companySlug);
             } catch (err) {
-
-                setError(
-                    err.message ||
-                    'Empresa não encontrada.'
-                );
-
-            } finally {
-
-                setLoading(false);
-
+                if (isCurrentRequest) {
+                    setError(err.message || 'Empresa não encontrada.');
+                    setLoadedCompanySlug(companySlug);
+                }
             }
-
         }
 
-        if (companySlug) {
+        if (companySlug) loadCompany();
 
-            loadCompany();
+        return () => {
+            isCurrentRequest = false;
+        };
+    }, [companySlug, user, navigate, logout]);
 
-        }
-
-    }, [companySlug, user, navigate, logout]); // 🌟 Adicionadas as dependências de segurança
-
-
+    const loading = loadedCompanySlug !== companySlug;
     /*
      * =========================================================
      * MENU MOBILE
@@ -217,11 +200,7 @@ export default function AdminLayout() {
 
             <main className={styles.mainContent}>
 
-                <Outlet
-                    context={{
-                        company
-                    }}
-                />
+                <Outlet context={{ company, updateCompany: setCompany }} />
 
             </main>
 
