@@ -9,6 +9,7 @@ import CadastroEmpresa from './pages/Admin/empresa/CadastroEmpresa.jsx';
 import CadastroCliente from './pages/Admin/cliente/CadastroCliente.jsx';
 import CadastroProfissional from './pages/Admin/profissional/CadastroProfissional.jsx';
 import CadastroServico from './pages/Admin/servico/CadastroServico.jsx';
+import CriarAgendamento from './pages/Admin/agendamento/CriarAgendamento.jsx';
 import HomePlataforma from './pages/HomePlataforma.jsx';
 import LoginCentral from './pages/LoginCentral.jsx'; // Importa a nova página de login centralizada
 //  página  de Login em src/pages/Login.jsx
@@ -56,6 +57,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             <Route path="servicos/novo" element={<CadastroServico />} />
             <Route path="clientes/novo" element={<CadastroCliente />} />
             <Route path="profissionais/novo" element={<CadastroProfissional />} />
+            <Route path="agendamentos/novo" element={<CriarAgendamento />} />
           </Route>
         </Routes>
       </AuthProvider>

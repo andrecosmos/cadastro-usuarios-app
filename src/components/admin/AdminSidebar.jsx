@@ -35,6 +35,11 @@ export default function AdminSidebar({ company }) {
             label: 'Cadastrar Cliente',
             path: `/` + companySlug + `/admin/clientes/novo`,
             icon: '👤'
+        },
+        {
+            label: 'Novo agendamento',
+            path: `/` + companySlug + `/admin/agendamentos/novo`,
+            icon: '➕'
         }
     ];
 

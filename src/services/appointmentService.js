@@ -29,6 +29,8 @@ export const appointmentService = {
     // ==========================================
   // AGENDAMENTOS 
   // ==========================================
+  searchCustomers: (companyId, query = '') =>
+    api.get('/api/customers/search', { params: { companyId, q: query } }),
   getAvailableSlots: (companyId, professionalId, serviceId, date) => 
     api.get('/api/appointments/available-slots', { params: { companyId, professionalId, serviceId, date } }),
   getAppointments: (companyId) => api.get('/api/appointments', { params: { companyId } }),
@@ -67,4 +69,3 @@ export const appointmentService = {
 
 
 };
-

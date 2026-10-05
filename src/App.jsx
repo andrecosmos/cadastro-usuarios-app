@@ -9,6 +9,7 @@ import { FaWhatsapp } from 'react-icons/fa';
 import { useAuth } from './contexts/AuthContext'; // Importando nosso contexto
 import styles from './App.module.css';
 import PerfilEstabelecimento from './pages/PerfilEstabelecimento'; 
+import { gerarLinkWhatsApp } from './hooks/whatsappHelper'; // Importando a função do helper
 
 export default function App() {
   const { companySlug } = useParams();
@@ -143,58 +144,69 @@ const [submittingBooking, setSubmittingBooking] = useState(false);
     loadSlots();
   }, [selectedDate, selectedStaff, selectedService, company]);
 
-     async function handleBookAppointment(dateTimeIso) {
-    if (!signed) {
-      // 🌟 ATUALIZADO: Salva o estado atual usando a chave 'returnToBooking' que seu login já escuta
-      navigate(`/${companySlug}/login`, { 
-        state: { 
-          returnToBooking: true,
-          selectedService,
-          selectedStaff,
-          selectedDate,
-          selectedSlot: dateTimeIso
-        } 
-      });
-      return;
+    async function handleBookAppointment(dateTimeIso) {
+      if (!signed) {
+        // 🌟 ATUALIZADO: Salva o estado atual usando a chave 'returnToBooking' que seu login já escuta
+        navigate(`/${companySlug}/login`, { 
+          state: { 
+            returnToBooking: true,
+            selectedService,
+            selectedStaff,
+            selectedDate,
+            selectedSlot: dateTimeIso
+          } 
+        });
+        return;
+      }
+
+      if (user?.companyId && company?._id && user.companyId !== company._id) {
+        alert(`Sua conta está vinculada a outro estabelecimento. Por favor, faça login com uma conta válida.`);
+        logout();
+        navigate(`/${companySlug}/login`);
+        return;
+      }
+
+        setError('');
+        setSubmittingBooking(true);
+
+        try {
+          const response = await appointmentService.createAppointment({
+            companyId: company._id,
+            customerId: user._id, 
+            professionalId: selectedStaff,
+            serviceId: selectedService,
+            startTime: dateTimeIso,
+          });
+
+          const dadosDoAgendamento = {
+            servico: services.find(s => s._id === selectedService)?.name || 'Serviço Selecionado',
+            profissional: staffList.find(st => st._id === selectedStaff)?.name || 'Profissional Selecionado',
+            data: selectedDate,
+            horario: formatBusinessTime(dateTimeIso),
+            duracao: services.find(s => s._id === selectedService)?.durationInMinutes || 30
+          };
+
+            setConfirmedData(dadosDoAgendamento);
+            setStep('sucesso');
+            setSuccessMessage(response.message);
+            setAvailableSlots((prev) => prev.filter((slot) => slot.dateTimeIso !== dateTimeIso));
+          } catch (err) {
+            setError(err.message);
+          } finally {
+            setSubmittingBooking(false);
+          }
     }
 
-    if (user?.companyId && company?._id && user.companyId !== company._id) {
-      alert(`Sua conta está vinculada a outro estabelecimento. Por favor, faça login com uma conta válida.`);
-      logout();
-      navigate(`/${companySlug}/login`);
-      return;
-    }
-
-    setError('');
-    setSubmittingBooking(true);
-
-    try {
-      const response = await appointmentService.createAppointment({
-        companyId: company._id,
-        customerId: user._id, 
-        professionalId: selectedStaff,
-        serviceId: selectedService,
-        startTime: dateTimeIso,
-      });
-
-      const dadosDoAgendamento = {
-        servico: services.find(s => s._id === selectedService)?.name || 'Serviço Selecionado',
-        profissional: staffList.find(st => st._id === selectedStaff)?.name || 'Profissional Selecionado',
-        data: selectedDate,
-        horario: formatBusinessTime(dateTimeIso),
-        duracao: services.find(s => s._id === selectedService)?.durationInMinutes || 30
-      };
-
-      setConfirmedData(dadosDoAgendamento);
-      setStep('sucesso');
-      setSuccessMessage(response.message);
-      setAvailableSlots((prev) => prev.filter((slot) => slot.dateTimeIso !== dateTimeIso));
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSubmittingBooking(false);
-    }
+      // 🌟 NOVA FUNÇÃO: Gera o link do WhatsApp com os dados salvos em confirmedData
+  function handleNotificarWhatsApp() {
+  // Passamos os dados atuais para o helper gerando o link do fluxo 'cliente'
+  const url = gerarLinkWhatsApp(confirmedData, company, 'cliente');
+  
+  if (url) {
+    window.open(url, '_blank');
   }
+}
+
 
   // 🌟 NOVO EFFECT: Escuta o retorno do login e reconstrói o formulário na hora
   useEffect(() => {
@@ -430,6 +442,7 @@ const [submittingBooking, setSubmittingBooking] = useState(false);
               Seu horário foi reservado com sucesso no estabelecimento <strong>{company?.name}</strong>.
             </p>
 
+              
             {/* Bilhete/Resumo com os detalhes do agendamento */}
             <div className={styles.ticketContainer}>
               <div className={styles.ticketRow}>
@@ -485,6 +498,14 @@ const [submittingBooking, setSubmittingBooking] = useState(false);
                 Voltar para o Início
               </button>
             </div>
+
+            <div className={styles.profileFooter}>
+              <button onClick={handleNotificarWhatsApp} className={styles.btnWhatsapp}>
+                <FaWhatsapp style={{ marginRight: '8px' }} /> 
+                Receber Lembrete via  WhatsApp
+              </button> 
+             </div>
+
           </div>
         </div>
       )}

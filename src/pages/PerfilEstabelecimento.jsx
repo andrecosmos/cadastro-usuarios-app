@@ -88,7 +88,7 @@ export default function PerfilEstabelecimento({ company, services, onSelectServi
             <p className={styles.phoneText}>📞 Telefone: <strong>{company.phone}</strong></p>
             
             <a 
-              href={`https://wa.me/{company.phone.replace(/\D/g, '')}`} // Injeta o DDI 55 do Brasil e remove caracteres especiais
+              href={`https://wa.me/${company.phone.replace(/\D/g, '')}`} // Injeta o DDI 55 do Brasil e remove caracteres especiais
               target="_blank" 
               rel="noreferrer" 
               className={styles.btnWhatsapp}

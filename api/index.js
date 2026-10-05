@@ -1,13 +1,12 @@
 import express from 'express';
 import { connectToDatabase } from './_config/database.js';
-import { Company } from './_models/Company.js';
 
+import { Company } from './_models/Company.js';
 import { Appointment } from './_models/Appointment.js';
 import { Service } from './_models/Service.js';
 import { Staff } from './_models/Staff.js';
-//  Forma correta para exportações default:
-// Altere para importar COM as chaves novamente:
 import { User } from './_models/User.js';
+
 import cors from 'cors';
 import crypto from 'crypto';
 import { Buffer } from 'node:buffer';
@@ -83,6 +82,28 @@ function generateSlug(text) {
     .replace(/\s+/g, '-').replace(/-+/g, '-');
 }
 
+const appointmentStartTimes = [
+  '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
+  '11:00', '11:30', '13:00', '13:30', '14:00', '14:30',
+  '15:00', '15:30', '16:00', '16:30', '17:00', '17:30'
+];
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function getBusinessDate(value) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(value);
+  const dateParts = Object.fromEntries(parts.map(({ type, value: part }) => [type, part]));
+
+  return `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+}
+
 // ==========================================
 // ROTAS: COMPANIES & CUSTOMERS
 // ==========================================
@@ -122,7 +143,7 @@ app.patch('/api/companies/update', authenticate, requireAdmin, requireCompanySco
       return res.status(400).json({ error: 'Nenhum campo para atualizar.' });
     }
 
-    const company = await Company.findByIdAndUpdate(companyId, updateData, { new: true });
+    const company = await Company.findByIdAndUpdate(companyId, updateData, { returnDocument: 'after' });
     if (!company) return res.status(404).json({ error: 'Empresa não encontrada.' });
 
     return res.status(200).json({ success: true, company });
@@ -134,16 +155,11 @@ app.patch('/api/companies/update', authenticate, requireAdmin, requireCompanySco
 // ==========================================
 // ROTA: CADASTRAR CLIENTE PELO PAINEL ADMIN
 // ==========================================
-// ROTA: CADASTRAR CLIENTE PELO PAINEL ADMIN (BLINDADA)
-// ==========================================
+
 app.post('/api/customers/create', authenticate, requireAdmin, requireCompanyScope, async (req, res) => {
   try {
     const { nome, email, telefone } = req.body;
     const companyId = req.auth.companyId;
-
-    // Log para ver exatamente o que o admin disparou da tela
-    console.log("➡️ DISPARO DE CRIAÇÃO DE CLIENTE ADMIN:", req.body);
-    console.log("Alvo de persistência física na coleção:", User.collection.name);
 
     if (!companyId || !nome || !telefone) {
       return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
@@ -173,8 +189,6 @@ app.post('/api/customers/create', authenticate, requireAdmin, requireCompanyScop
     // Se o banco rejeitar por falta de conexão, o bloco catch captura na hora!
     const clienteSalvo = await novoClienteDoc.save();
 
-    console.log("✅ CONFIRMAÇÃO DE SALVAMENTO FÍSICO NO BANCO:", clienteSalvo);
-
     return res.status(201).json({ 
       success: true, 
       message: 'Cliente cadastrado com sucesso!', 
@@ -184,6 +198,40 @@ app.post('/api/customers/create', authenticate, requireAdmin, requireCompanyScop
   } catch (e) { 
     console.error("💥 ERRO FATAL AO TENTAR PERSISTIR CLIENTE:", e);
     return res.status(500).json({ error: 'Erro ao salvar cliente: ' + e.message }); 
+  }
+});
+
+app.get('/api/customers/search', authenticate, requireAdmin, requireCompanyScope, async (req, res) => {
+  try {
+    const companyId = req.auth.companyId;
+    const searchTerm = String(req.query.q || '').trim();
+
+    if (searchTerm.length === 1) {
+      return res.status(200).json({ success: true, customers: [] });
+    }
+
+    const searchFilter = searchTerm
+      ? {
+          $or: ['nome', 'email', 'telefone'].map((field) => ({
+            [field]: { $regex: escapeRegExp(searchTerm), $options: 'i' }
+          }))
+        }
+      : {};
+
+    const customers = await User.find({
+      companyId,
+      role: 'user',
+      ...searchFilter
+    })
+      .select('_id nome email telefone')
+      .sort({ nome: 1 })
+      .limit(20)
+      .lean();
+
+    return res.status(200).json({ success: true, customers });
+  } catch (e) {
+    console.error('Erro ao buscar clientes da empresa:', e);
+    return res.status(500).json({ error: 'Não foi possível buscar os clientes.' });
   }
 });
 
@@ -234,81 +282,206 @@ app.get('/api/appointments/list', authenticate, requireAdmin, requireCompanyScop
 app.get('/api/appointments/available-slots', async (req, res) => {
   try {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    const { companyId, professionalId, date } = req.query;
+    const { companyId, professionalId, serviceId, date } = req.query;
 
-    if (!companyId || !date) {
-      return res.status(200).json({ availableSlots: [] });
+    if (
+      !mongoose.isValidObjectId(companyId) ||
+      !mongoose.isValidObjectId(professionalId) ||
+      !mongoose.isValidObjectId(serviceId) ||
+      !date
+    ) {
+      return res.status(400).json({ error: 'Empresa, profissional, serviço e data válidos são obrigatórios.' });
+    }
+
+    const [service, professional] = await Promise.all([
+      Service.findOne({ _id: serviceId, companyId, isActive: true }).lean(),
+      Staff.findOne({ _id: professionalId, companyId, isActive: true }).lean()
+    ]);
+
+    if (!service || !professional) {
+      return res.status(404).json({ error: 'Serviço ou profissional não encontrado para esta empresa.' });
+    }
+
+    const durationInMinutes = Number(service.durationInMinutes);
+    if (!Number.isFinite(durationInMinutes) || durationInMinutes <= 0) {
+      return res.status(400).json({ error: 'A duração do serviço é inválida.' });
     }
 
     const { start, endExclusive } = getBusinessDayBounds(date);
+    const closingTime = new Date(toBusinessDateTimeIso(date, '18:00'));
 
     const existingAppointments = await Appointment.find({
       companyId,
       professionalId,
-      startTime: { $gte: start, $lt: endExclusive },
+      startTime: { $lt: endExclusive },
+      endTime: { $gt: start },
       status: { $ne: 'canceled' }
-    });
+    }).lean();
 
-    const defaultHours = [
-      "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", 
-      "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30"
-    ];
-    
-    const slotsFormatted = defaultHours
-      .filter(time => {
-        const isOccupied = existingAppointments.some(app => {
-          const appTime = formatBusinessTime(app.startTime);
-          return appTime === time;
-        });
-        return !isOccupied;
+    const slotsFormatted = appointmentStartTimes
+      .map((time) => {
+        const slotStart = new Date(toBusinessDateTimeIso(date, time));
+        const slotEnd = new Date(slotStart.getTime() + durationInMinutes * 60000);
+        const isOccupied = existingAppointments.some((appointment) =>
+          slotStart < new Date(appointment.endTime) &&
+          slotEnd > new Date(appointment.startTime)
+        );
+
+        return {
+          time,
+          dateTimeIso: slotStart.toISOString(),
+          isAvailable: !isOccupied && slotStart > new Date() && slotEnd <= closingTime
+        };
       })
-      .map(time => {
-        const dateTimeIso = toBusinessDateTimeIso(date, time);
-        return { time, dateTimeIso };
-      });
+      .filter((slot) => slot.isAvailable)
+      .map(({ time, dateTimeIso }) => ({ time, dateTimeIso }));
 
     return res.status(200).json({
       success: true,
       availableSlots: slotsFormatted
     });
-  } catch {
-    return res.status(200).json({ availableSlots: [] });
+  } catch (e) {
+    if (e instanceof RangeError) {
+      return res.status(400).json({ error: 'Data inválida.' });
+    }
+    console.error('Erro ao consultar horários disponíveis:', e);
+    return res.status(500).json({ error: 'Não foi possível consultar os horários disponíveis.' });
   }
 });
 
-app.post('/api/appointments/create', async (req, res) => {
+app.post('/api/appointments/create', authenticate, requireCompanyScope, async (req, res) => {
   try {
     const { companyId, customerId, professionalId, serviceId, startTime } = req.body;
-    
-    // Log de segurança para debugar no seu VS Code se algum ID sumir
-    console.log("➡️ TENTATIVA DE AGENDAMENTO RECEBIDA:", req.body);
 
-    if (!companyId || !customerId || !professionalId || !serviceId || !startTime) {
+    if (
+      !mongoose.isValidObjectId(companyId) ||
+      !mongoose.isValidObjectId(customerId) ||
+      !mongoose.isValidObjectId(professionalId) ||
+      !mongoose.isValidObjectId(serviceId) ||
+      !startTime
+    ) {
       return res.status(400).json({ error: 'Campos obrigatórios ausentes para o agendamento.' });
     }
 
-    const service = await Service.findById(serviceId);
+    if (!['admin', 'user'].includes(req.auth.role)) {
+      return res.status(403).json({ error: 'Acesso ao agendamento negado.' });
+    }
+
+    if (req.auth.role === 'user' && customerId !== req.auth.userId) {
+      return res.status(403).json({ error: 'Clientes só podem criar agendamentos para si mesmos.' });
+    }
+
+    const [customer, service, professional] = await Promise.all([
+      User.findOne({ _id: customerId, companyId, role: 'user' }).select('_id').lean(),
+      Service.findOne({ _id: serviceId, companyId, isActive: true }).lean(),
+      Staff.findOne({ _id: professionalId, companyId, isActive: true }).select('_id').lean()
+    ]);
+
+    if (!customer) {
+      return res.status(404).json({ error: 'Cliente não encontrado para esta empresa.' });
+    }
     if (!service) {
-      return res.status(404).json({ error: 'Serviço não encontrado.' });
+      return res.status(404).json({ error: 'Serviço não encontrado ou inativo para esta empresa.' });
+    }
+    if (!professional) {
+      return res.status(404).json({ error: 'Profissional não encontrado ou inativo para esta empresa.' });
     }
 
     const start = new Date(startTime);
-    const end = new Date(start.getTime() + service.durationInMinutes * 60000);
+    const durationInMinutes = Number(service.durationInMinutes);
+    if (
+      Number.isNaN(start.getTime()) ||
+      !Number.isFinite(durationInMinutes) ||
+      durationInMinutes <= 0
+    ) {
+      return res.status(400).json({ error: 'Data, horário ou duração do serviço inválidos.' });
+    }
 
-    const newAppointment = await Appointment.create({
-      companyId, 
-      customerId, // Este ID agora aponta para o _id do Andrade ou do cliente na tabela de usuários
-      professionalId, 
-      serviceId,
-      startTime: start, 
-      endTime: end, 
-      status: 'pending', 
-      paymentStatus: 'unpaid'
-    });
+    const businessDate = getBusinessDate(start);
+    const businessTime = formatBusinessTime(start);
+    if (
+      !appointmentStartTimes.includes(businessTime) ||
+      start.getUTCSeconds() !== 0 ||
+      start.getUTCMilliseconds() !== 0
+    ) {
+      return res.status(400).json({ error: 'O horário solicitado não está disponível para agendamento.' });
+    }
 
-    return res.status(201).json({ success: true, message: 'Agendamento com sucesso!', data: newAppointment });
+    const { start: dayStart } = getBusinessDayBounds(businessDate);
+    const end = new Date(start.getTime() + durationInMinutes * 60000);
+    const closingTime = new Date(toBusinessDateTimeIso(businessDate, '18:00'));
+
+    if (start < dayStart || end > closingTime) {
+      return res.status(400).json({ error: 'O serviço ultrapassa o horário de atendimento.' });
+    }
+
+    const bookingLockToken = crypto.randomUUID();
+    const lockTime = new Date();
+    const lockExpiresAt = new Date(lockTime.getTime() + 60_000);
+    const lockedProfessional = await Staff.findOneAndUpdate(
+      {
+        _id: professionalId,
+        companyId,
+        isActive: true,
+        $or: [
+          { bookingLockUntil: { $exists: false } },
+          { bookingLockUntil: { $lte: lockTime } }
+        ]
+      },
+      {
+        $set: {
+          bookingLockToken,
+          bookingLockUntil: lockExpiresAt
+        }
+      },
+      { returnDocument: 'after' }
+    ).select('+bookingLockToken').lean();
+
+    if (!lockedProfessional) {
+      return res.status(409).json({ error: 'Este profissional está confirmando outro agendamento. Tente novamente.' });
+    }
+
+    let newAppointment;
+    let hasOverlap = false;
+
+    try {
+      hasOverlap = Boolean(await Appointment.exists({
+        companyId,
+        professionalId,
+        status: { $ne: 'canceled' },
+        startTime: { $lt: end },
+        endTime: { $gt: start }
+      }));
+
+      if (!hasOverlap) {
+        newAppointment = await Appointment.create({
+          companyId,
+          customerId,
+          professionalId,
+          serviceId,
+          startTime: start,
+          endTime: end,
+          status: 'pending',
+          paymentStatus: 'unpaid'
+        });
+      }
+    } finally {
+      await Staff.updateOne(
+        { _id: professionalId, companyId, bookingLockToken },
+        { $unset: { bookingLockToken: 1, bookingLockUntil: 1 } }
+      );
+    }
+
+    if (hasOverlap) {
+      return res.status(409).json({ error: 'Este horário acabou de ser ocupado. Escolha outro horário.' });
+    }
+
+    return res.status(201).json({ success: true, message: 'Agendamento realizado com sucesso!', data: newAppointment });
   } catch (e) { 
     console.error("Erro ao criar agendamento:", e);
+    if (e instanceof RangeError) {
+      return res.status(400).json({ error: 'Data ou horário inválido.' });
+    }
     return res.status(500).json({ error: e.message }); 
   }
 });
@@ -328,7 +501,7 @@ app.patch('/api/appointments/update-status', authenticate, requireAdmin, require
     const updated = await Appointment.findOneAndUpdate(
       { _id: appointmentId, companyId: req.auth.companyId },
       { status },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
     if (!updated) return res.status(404).json({ error: 'Não encontrado.' });
     return res.status(200).json({ success: true, data: updated });

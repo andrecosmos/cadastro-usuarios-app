@@ -145,8 +145,12 @@ function CadastroCliente() {
             <button type="submit" disabled={loading} className={styles.primary}>
               {loading ? 'Salvando...' : 'Cadastrar cliente'}
             </button>
+
+            
           </div>
         </form>
+
+         
       </div>
     </div>
   );

@@ -1,0 +1,319 @@
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.header {
+  margin-bottom: 24px;
+}
+
+.header h1 {
+  margin: 0 0 8px;
+  color: #0f172a;
+  font-size: 1.75rem;
+}
+
+.header p {
+  margin: 0;
+  color: #64748b;
+}
+
+.form {
+  display: grid;
+  gap: 18px;
+}
+
+.card,
+.summary {
+  padding: 22px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(15 23 42 / 5%);
+}
+
+.card h2,
+.summary h2 {
+  margin: 0 0 16px;
+  color: #1e293b;
+  font-size: 1.125rem;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.label {
+  display: block;
+  margin-bottom: 7px;
+  color: #334155;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+}
+
+.input:focus {
+  border-color: #4f46e5;
+  outline: 3px solid rgb(79 70 229 / 15%);
+}
+
+.customerResults {
+  display: grid;
+  max-height: 240px;
+  margin-top: 8px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.customerOption {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 11px 13px;
+  border: 0;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fff;
+  color: #0f172a;
+  text-align: left;
+  cursor: pointer;
+}
+
+.customerOption:last-child {
+  border-bottom: 0;
+}
+
+.customerOption:hover,
+.customerOption:focus-visible {
+  background: #f1f5f9;
+}
+
+.customerOption span,
+.selectedCustomer span {
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.selectedCustomer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid #c7d2fe;
+  border-radius: 8px;
+  background: #eef2ff;
+}
+
+.selectedCustomer div {
+  display: grid;
+  gap: 4px;
+}
+
+.textButton {
+  border: 0;
+  background: transparent;
+  color: #4338ca;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dateField {
+  max-width: 300px;
+  margin-bottom: 18px;
+}
+
+.slotGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 9px;
+}
+
+.slot {
+  min-height: 42px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #fff;
+  color: #334155;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.slot:hover {
+  border-color: #6366f1;
+  background: #eef2ff;
+}
+
+.slotSelected {
+  border-color: #4f46e5;
+  background: #4f46e5;
+  color: #fff;
+}
+
+.helper {
+  margin: 10px 0 0;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.summary {
+  border-color: #c7d2fe;
+  background: #f8faff;
+}
+
+.summary p {
+  margin: 7px 0;
+  color: #334155;
+}
+
+.error,
+.success {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.error {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.success {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.whatsappConfirmation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px;
+  border: 1px solid #86efac;
+  border-radius: 12px;
+  background: #f0fdf4;
+}
+
+.whatsappConfirmation h2 {
+  margin: 0 0 6px;
+  color: #166534;
+  font-size: 1rem;
+}
+
+.whatsappConfirmation p {
+  margin: 0;
+  color: #3f6212;
+  font-size: 0.875rem;
+}
+
+.whatsappButton {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid #15803d;
+  border-radius: 7px;
+  background: #16a34a;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.whatsappButton:hover {
+  background: #15803d;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.primary,
+.secondary {
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: 7px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary {
+  border: 1px solid #4338ca;
+  background: #4f46e5;
+  color: #fff;
+}
+
+.primary:hover:not(:disabled) {
+  background: #4338ca;
+}
+
+.primary:disabled {
+  border-color: #a5b4fc;
+  background: #a5b4fc;
+  cursor: not-allowed;
+}
+
+.secondary {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 16px;
+  }
+
+  .card,
+  .summary {
+    padding: 16px;
+  }
+
+  .fields {
+    grid-template-columns: 1fr;
+  }
+
+  .selectedCustomer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .whatsappConfirmation {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .actions {
+    flex-direction: column-reverse;
+  }
+
+  .actions button {
+    width: 100%;
+  }
+}

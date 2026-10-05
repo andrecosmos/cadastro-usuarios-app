@@ -5,7 +5,9 @@ const StaffSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String },
   specialties: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Service' }], // IDs dos serviços que ele faz
-  isActive: { type: Boolean, default: true }
+  isActive: { type: Boolean, default: true },
+  bookingLockToken: { type: String, select: false },
+  bookingLockUntil: { type: Date, select: false }
 }, { timestamps: true });
 
 export const Staff = mongoose.models.Staff || mongoose.model('Staff', StaffSchema);
