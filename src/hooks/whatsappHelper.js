@@ -17,7 +17,12 @@ export function gerarLinkWhatsApp(agendamento, empresa, tipoFluxo = 'cliente') {
   if (telefoneLimpo.length === 10 || telefoneLimpo.length === 11) {
     telefoneLimpo = `55${telefoneLimpo}`;
   }
-  if (telefoneLimpo.length < 12 || telefoneLimpo.length > 15) return '';
+  if (
+    tipoFluxo === 'admin' &&
+    (telefoneLimpo.length < 12 || telefoneLimpo.length > 15)
+  ) {
+    return '';
+  }
   
   // Formata a data de yyyy-MM-dd para dd/mm/yyyy se necessário
   const dataFormatada = data.includes('-') 

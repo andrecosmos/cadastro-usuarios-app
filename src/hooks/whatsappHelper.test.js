@@ -31,3 +31,16 @@ test('does not create a WhatsApp link when the customer phone is invalid', () =>
 
   assert.equal(link, '');
 });
+
+test('allows the customer flow to open WhatsApp without a recipient phone', () => {
+  const link = gerarLinkWhatsApp({
+    servico: 'Corte',
+    profissional: 'Ana',
+    data: '2026-10-06',
+    horario: '14:30'
+  }, { name: 'Studio Exemplo' }, 'cliente');
+  const url = new URL(link);
+
+  assert.equal(url.origin + url.pathname, 'https://wa.me/');
+  assert.match(url.searchParams.get('text'), /Meu Agendamento Confirmado/);
+});
