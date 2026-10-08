@@ -1,5 +1,6 @@
 import express from 'express';
 import { connectToDatabase } from './_config/database.js';
+import { MercadoPagoConfig, Payment as MPPayment, Preference } from 'mercadopago';
 
 import { Company } from './_models/Company.js';
 import { Appointment } from './_models/Appointment.js';
@@ -7,10 +8,12 @@ import { Service } from './_models/Service.js';
 import { Staff } from './_models/Staff.js';
 import { User } from './_models/User.js';
 
+
 import cors from 'cors';
 import crypto from 'crypto';
 import { Buffer } from 'node:buffer';
 import bcrypt from 'bcryptjs';
+import process from 'node:process';
 import {
   authenticate,
   createAccessToken,
@@ -104,6 +107,52 @@ function getBusinessDate(value) {
   return `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
 }
 
+function getPublicAppUrl() {
+  const configuredUrl = process.env.PUBLIC_APP_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
+
+  if (!configuredUrl) {
+    throw new Error('PUBLIC_APP_URL ausente. Configure a origem HTTPS pública da aplicação; localhost não recebe webhooks do Mercado Pago.');
+  }
+
+  let appUrl;
+  try {
+    appUrl = new URL(configuredUrl);
+  } catch {
+    throw new Error('PUBLIC_APP_URL inválida. Informe apenas a origem HTTPS pública, sem caminho.');
+  }
+  if (appUrl.protocol !== 'https:') {
+    throw new Error('PUBLIC_APP_URL deve ser HTTPS e acessível publicamente; localhost não recebe webhooks do Mercado Pago.');
+  }
+
+  return appUrl.origin;
+}
+
+function getCompanyResponse(company, mercadoPagoConfigured) {
+  const companyData = company.toObject ? company.toObject() : { ...company };
+  if (companyData.settings) {
+    delete companyData.settings.mercadoPagoAccessToken;
+  }
+  companyData.settings = {
+    ...companyData.settings,
+    mercadoPagoConfigured
+  };
+  return companyData;
+}
+
+function activeAppointmentFilter(now = new Date()) {
+  return {
+    status: { $ne: 'canceled' },
+    $or: [
+      { status: { $ne: 'pending' } },
+      { paymentStatus: 'paid' },
+      { paymentExpiresAt: { $exists: false } },
+      { paymentExpiresAt: null },
+      { paymentExpiresAt: { $gt: now } }
+    ]
+  };
+}
+
 // ==========================================
 // ROTAS: COMPANIES & CUSTOMERS
 // ==========================================
@@ -124,33 +173,98 @@ app.get('/api/companies/get-by-slug', async (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     const { slug } = req.query;
     if (!slug) return res.status(400).json({ error: 'Slug obrigatório.' });
-    const company = await Company.findOne({ slug });
+    const company = await Company.findOne({ slug }).lean();
     if (!company) return res.status(404).json({ error: 'Não encontrado.' });
-    return res.status(200).json({ success: true, company });
+    const mercadoPagoConfigured = await Company.exists({
+      _id: company._id,
+      'settings.mercadoPagoAccessToken': { $type: 'string', $ne: '' }
+    });
+    return res.status(200).json({
+      success: true,
+      company: getCompanyResponse(company, Boolean(mercadoPagoConfigured))
+    });
   } catch (e) { return res.status(500).json({ error: e.message }); }
 });
 
+
+// Rota para atualizar informações das empresas (Versão com Banner e Logo)
 app.patch('/api/companies/update', authenticate, requireAdmin, requireCompanyScope, async (req, res) => {
   try {
-    const { name, phone } = req.body;
+    // 1. Incluímos bannerUrl e logoUrl na desestruturação do corpo da requisição
+    const { 
+      name, 
+      phone, 
+      mercadoPagoAccessToken, 
+      clearMercadoPagoAccessToken,
+      bannerUrl,
+      logoUrl
+    } = req.body;
+    
     const companyId = req.auth.companyId;
 
     const updateData = {};
     if (name) updateData.name = name;
     if (phone) updateData.phone = phone;
 
+    // --- NOVAS VALIDAÇÕES PARA AS IMAGENS ---
+    // Validamos se são strings legítimas antes de salvar para evitar sujeira no banco
+    if (bannerUrl !== undefined) {
+      if (typeof bannerUrl !== 'string' || !bannerUrl.trim()) {
+        return res.status(400).json({ error: 'A URL do banner informada é inválida.' });
+      }
+      updateData.bannerUrl = bannerUrl.trim();
+    }
+
+    if (logoUrl !== undefined) {
+      if (typeof logoUrl !== 'string' || !logoUrl.trim()) {
+        return res.status(400).json({ error: 'A URL da logo informada é inválida.' });
+      }
+      updateData.logoUrl = logoUrl.trim();
+    }
+    // ----------------------------------------
+
+    // Valitações do Mercado Pago (Mantidas idênticas ao seu original)
+    if (clearMercadoPagoAccessToken !== undefined && typeof clearMercadoPagoAccessToken !== 'boolean') {
+      return res.status(400).json({ error: 'A opção de remover o token do Mercado Pago é inválida.' });
+    }
+    if (clearMercadoPagoAccessToken && mercadoPagoAccessToken !== undefined) {
+      return res.status(400).json({ error: 'Informe um novo token ou solicite a remoção, não ambos.' });
+    }
+    if (mercadoPagoAccessToken !== undefined) {
+      if (
+        typeof mercadoPagoAccessToken !== 'string' ||
+        !mercadoPagoAccessToken.trim() ||
+        mercadoPagoAccessToken.trim().length > 1000
+      ) {
+        return res.status(400).json({ error: 'O token do Mercado Pago informado é inválido.' });
+      }
+      updateData['settings.mercadoPagoAccessToken'] = mercadoPagoAccessToken.trim();
+    } else if (clearMercadoPagoAccessToken) {
+      updateData['settings.mercadoPagoAccessToken'] = null;
+    }
+
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ error: 'Nenhum campo para atualizar.' });
     }
 
-    const company = await Company.findByIdAndUpdate(companyId, updateData, { returnDocument: 'after' });
+    // O findByIdAndUpdate já vai aplicar as novas URLs se elas existirem no updateData
+    await Company.findByIdAndUpdate(companyId, updateData, { returnDocument: 'after' });
+    
+    const company = await Company.findById(companyId)
+      .select('+settings.mercadoPagoAccessToken');
     if (!company) return res.status(404).json({ error: 'Empresa não encontrada.' });
 
-    return res.status(200).json({ success: true, company });
+    const mercadoPagoConfigured = Boolean(company.settings?.mercadoPagoAccessToken);
+    
+    return res.status(200).json({
+      success: true,
+      company: getCompanyResponse(company, mercadoPagoConfigured)
+    });
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
 });
+
 
 // ==========================================
 // ROTA: CADASTRAR CLIENTE PELO PAINEL ADMIN
@@ -313,9 +427,9 @@ app.get('/api/appointments/available-slots', async (req, res) => {
     const existingAppointments = await Appointment.find({
       companyId,
       professionalId,
+      ...activeAppointmentFilter(),
       startTime: { $lt: endExclusive },
-      endTime: { $gt: start },
-      status: { $ne: 'canceled' }
+      endTime: { $gt: start }
     }).lean();
 
     const slotsFormatted = appointmentStartTimes
@@ -349,6 +463,8 @@ app.get('/api/appointments/available-slots', async (req, res) => {
   }
 });
 
+
+//Rota de Criação de Agendamento
 app.post('/api/appointments/create', authenticate, requireCompanyScope, async (req, res) => {
   try {
     const { companyId, customerId, professionalId, serviceId, startTime } = req.body;
@@ -372,7 +488,7 @@ app.post('/api/appointments/create', authenticate, requireCompanyScope, async (r
     }
 
     const [customer, service, professional] = await Promise.all([
-      User.findOne({ _id: customerId, companyId, role: 'user' }).select('_id').lean(),
+      User.findOne({ _id: customerId, companyId, role: 'user' }).select('_id email nome').lean(),
       Service.findOne({ _id: serviceId, companyId, isActive: true }).lean(),
       Staff.findOne({ _id: professionalId, companyId, isActive: true }).select('_id').lean()
     ]);
@@ -387,14 +503,40 @@ app.post('/api/appointments/create', authenticate, requireCompanyScope, async (r
       return res.status(404).json({ error: 'Profissional não encontrado ou inativo para esta empresa.' });
     }
 
+    let checkoutConfiguration = null;
+    if (req.auth.role === 'user') {
+      const company = await Company.findById(companyId)
+        .select('+settings.mercadoPagoAccessToken')
+        .lean();
+      if (company?.settings?.mercadoPagoAccessToken) {
+        try {
+          const publicAppUrl = getPublicAppUrl();
+          const webhookUrl = new URL('/api/webhooks/mercado-pago', publicAppUrl);
+          webhookUrl.searchParams.set('companyId', String(company._id));
+
+          checkoutConfiguration = {
+            accessToken: company.settings.mercadoPagoAccessToken,
+            companyName: company.name,
+            companySlug: company.slug,
+            publicAppUrl,
+            notificationUrl: webhookUrl.href
+          };
+        } catch (error) {
+          console.warn('Checkout indisponível para este agendamento; pagamento poderá ser feito no estabelecimento:', error.message);
+        }
+      }
+    }
+
     const start = new Date(startTime);
     const durationInMinutes = Number(service.durationInMinutes);
+    const paymentAmount = Number(service.price);
     if (
       Number.isNaN(start.getTime()) ||
       !Number.isFinite(durationInMinutes) ||
-      durationInMinutes <= 0
+      durationInMinutes <= 0 ||
+      (req.auth.role === 'user' && (!Number.isFinite(paymentAmount) || paymentAmount <= 0))
     ) {
-      return res.status(400).json({ error: 'Data, horário ou duração do serviço inválidos.' });
+      return res.status(400).json({ error: 'Data, horário, duração ou preço do serviço inválidos.' });
     }
 
     const businessDate = getBusinessDate(start);
@@ -448,7 +590,7 @@ app.post('/api/appointments/create', authenticate, requireCompanyScope, async (r
       hasOverlap = Boolean(await Appointment.exists({
         companyId,
         professionalId,
-        status: { $ne: 'canceled' },
+        ...activeAppointmentFilter(lockTime),
         startTime: { $lt: end },
         endTime: { $gt: start }
       }));
@@ -461,8 +603,10 @@ app.post('/api/appointments/create', authenticate, requireCompanyScope, async (r
           serviceId,
           startTime: start,
           endTime: end,
-          status: 'pending',
-          paymentStatus: 'unpaid'
+          status: req.auth.role === 'user' ? 'confirmed' : 'pending',
+          paymentStatus: 'unpaid',
+          paymentAmount,
+          paymentCurrency: 'BRL'
         });
       }
     } finally {
@@ -476,7 +620,76 @@ app.post('/api/appointments/create', authenticate, requireCompanyScope, async (r
       return res.status(409).json({ error: 'Este horário acabou de ser ocupado. Escolha outro horário.' });
     }
 
-    return res.status(201).json({ success: true, message: 'Agendamento realizado com sucesso!', data: newAppointment });
+    if (checkoutConfiguration) {
+      const checkoutReturnUrl = new URL(`/${encodeURIComponent(checkoutConfiguration.companySlug)}`, checkoutConfiguration.publicAppUrl);
+      const successUrl = new URL(checkoutReturnUrl);
+      successUrl.searchParams.set('checkout_return', 'success');
+      const pendingUrl = new URL(checkoutReturnUrl);
+      pendingUrl.searchParams.set('checkout_return', 'pending');
+      const failureUrl = new URL(checkoutReturnUrl);
+      failureUrl.searchParams.set('checkout_return', 'failure');
+
+      try {
+        const preference = new Preference(new MercadoPagoConfig({
+          accessToken: checkoutConfiguration.accessToken
+        }));
+        const preferenceResponse = await preference.create({
+          body: {
+            items: [{
+              id: String(service._id),
+              title: `${service.name} - ${checkoutConfiguration.companyName}`,
+              quantity: 1,
+              unit_price: paymentAmount,
+              currency_id: 'BRL'
+            }],
+            payer: customer.email ? { email: customer.email } : undefined,
+            external_reference: String(newAppointment._id),
+            metadata: {
+              appointment_id: String(newAppointment._id),
+              company_id: String(companyId)
+            },
+            back_urls: {
+              success: successUrl.toString(),
+              pending: pendingUrl.toString(),
+              failure: failureUrl.toString()
+            },
+            auto_return: 'approved',
+            notification_url: checkoutConfiguration.notificationUrl.toString(),
+          }
+        });
+
+        if (!preferenceResponse.id || !preferenceResponse.init_point) {
+          throw new Error('Mercado Pago não retornou os dados necessários para o checkout.');
+        }
+
+        await Appointment.updateOne(
+          { _id: newAppointment._id, companyId },
+          {
+            $set: {
+              gatewayPreferenceId: String(preferenceResponse.id),
+              gatewayCheckoutUrl: preferenceResponse.init_point
+            }
+          }
+        );
+
+        return res.status(201).json({
+          success: true,
+          message: 'Agendamento confirmado. Você pode pagar pelo checkout ou no estabelecimento.',
+          checkoutUrl: preferenceResponse.init_point,
+          data: newAppointment
+        });
+      } catch (error) {
+        console.error(`Falha ao criar preferência do Mercado Pago; agendamento confirmado para pagamento no estabelecimento: ${error.message}`);
+      }
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: req.auth.role === 'user'
+        ? 'Agendamento confirmado. O pagamento poderá ser feito no estabelecimento.'
+        : 'Agendamento realizado com sucesso!',
+      data: newAppointment
+    });
   } catch (e) { 
     console.error("Erro ao criar agendamento:", e);
     if (e instanceof RangeError) {
@@ -508,6 +721,196 @@ app.patch('/api/appointments/update-status', authenticate, requireAdmin, require
   } catch (e) { return res.status(500).json({ error: e.message }); }
 });
 
+
+// Rota para registrar pagamento presencial
+app.patch('/api/appointments/record-payment', authenticate, requireAdmin, requireCompanyScope, async (req, res) => {
+  try {
+    const { appointmentId, method } = req.body;
+    const allowedMethods = ['pix', 'cash', 'card'];
+    if (!mongoose.isValidObjectId(appointmentId) || !allowedMethods.includes(method)) {
+      return res.status(400).json({ error: 'Agendamento ou método de pagamento inválido.' });
+    }
+
+    const appointment = await Appointment.findOne({
+      _id: appointmentId,
+      companyId: req.auth.companyId,
+      status: { $in: ['pending', 'confirmed', 'completed'] },
+      paymentStatus: { $ne: 'paid' }
+    }).populate('serviceId');
+
+    if (!appointment) {
+      const existingAppointment = await Appointment.exists({
+        _id: appointmentId,
+        companyId: req.auth.companyId
+      });
+      return existingAppointment
+        ? res.status(409).json({ error: 'Este agendamento já foi pago ou não aceita registro de pagamento.' })
+        : res.status(404).json({ error: 'Agendamento não encontrado.' });
+    }
+
+    const receivedAmount = Number(appointment.paymentAmount ?? appointment.serviceId?.price);
+    if (!Number.isFinite(receivedAmount) || receivedAmount <= 0) {
+      return res.status(400).json({ error: 'O agendamento não possui um valor válido para registrar.' });
+    }
+
+    const updatedAppointment = await Appointment.findOneAndUpdate(
+      {
+        _id: appointmentId,
+        companyId: req.auth.companyId,
+        status: { $in: ['pending', 'confirmed', 'completed'] },
+        paymentStatus: { $ne: 'paid' }
+      },
+      {
+        $set: {
+          paymentStatus: 'paid',
+          paymentMethod: method,
+          paymentReceivedAt: new Date(),
+          paymentReceivedAmount: receivedAmount,
+          paymentAmount: receivedAmount,
+          paymentCurrency: 'BRL'
+        }
+      },
+      { returnDocument: 'after', runValidators: true }
+    );
+
+    if (!updatedAppointment) {
+      return res.status(409).json({ error: 'O pagamento deste agendamento já foi registrado.' });
+    }
+
+    return res.status(200).json({ success: true, data: updatedAppointment });
+  } catch (error) {
+    console.error('Erro ao registrar pagamento presencial:', error);
+    return res.status(500).json({ error: 'Não foi possível registrar o pagamento.' });
+  }
+});
+
+app.get('/api/reports/summary', authenticate, requireAdmin, requireCompanyScope, async (req, res) => {
+  try {
+    const { from, to } = req.query;
+    if (typeof from !== 'string' || typeof to !== 'string') {
+      return res.status(400).json({ error: 'Informe as datas inicial e final do relatório.' });
+    }
+
+    let start;
+    let endExclusive;
+    try {
+      start = getBusinessDayBounds(from).start;
+      endExclusive = getBusinessDayBounds(to).endExclusive;
+    } catch {
+      return res.status(400).json({ error: 'O período informado é inválido.' });
+    }
+    if (start >= endExclusive) {
+      return res.status(400).json({ error: 'A data inicial deve ser anterior ou igual à data final.' });
+    }
+
+    const companyId = new mongoose.Types.ObjectId(req.auth.companyId);
+    const reportNow = new Date();
+    const [appointmentCounts, receivedPayments] = await Promise.all([
+      Appointment.aggregate([
+        { $match: { companyId, createdAt: { $gte: start, $lt: endExclusive } } },
+        {
+          $group: {
+            _id: '$status',
+            count: { $sum: 1 },
+            attendanceEligible: {
+              $sum: {
+                $cond: [
+                  {
+                    $and: [
+                      { $in: ['$status', ['confirmed', 'completed']] },
+                      { $lte: ['$endTime', reportNow] }
+                    ]
+                  },
+                  1,
+                  0
+                ]
+              }
+            },
+            attended: {
+              $sum: {
+                $cond: [
+                  { $and: [{ $eq: ['$status', 'completed'] }, { $lte: ['$endTime', reportNow] }] },
+                  1,
+                  0
+                ]
+              }
+            }
+          }
+        }
+      ]),
+      Appointment.aggregate([
+        {
+          $match: {
+            companyId,
+            paymentStatus: 'paid',
+            $or: [
+              { paymentReceivedAt: { $gte: start, $lt: endExclusive } },
+              {
+                paymentReceivedAt: null,
+                gatewayPaymentId: { $exists: true, $ne: null },
+                updatedAt: { $gte: start, $lt: endExclusive }
+              }
+            ]
+          }
+        },
+        {
+          $group: {
+            _id: {
+              $ifNull: [
+                '$paymentMethod',
+                { $cond: [{ $ifNull: ['$gatewayPaymentId', false] }, 'mercado_pago', 'unknown'] }
+              ]
+            },
+            count: { $sum: 1 },
+            amount: {
+              $sum: {
+                $ifNull: ['$paymentReceivedAmount', '$paymentAmount']
+              }
+            }
+          }
+        },
+        { $sort: { _id: 1 } }
+      ])
+    ]);
+
+    const counts = Object.fromEntries(appointmentCounts.map(({ _id, count }) => [_id, count]));
+    const created = appointmentCounts.reduce((total, item) => total + item.count, 0);
+    const completed = counts.completed || 0;
+    const canceled = counts.canceled || 0;
+    const attendanceEligible = appointmentCounts.reduce((total, item) => total + item.attendanceEligible, 0);
+    const attended = appointmentCounts.reduce((total, item) => total + item.attended, 0);
+    const methods = receivedPayments.map(({ _id, count, amount }) => ({
+      method: _id,
+      count,
+      amount: Math.round(amount * 100) / 100
+    }));
+    const revenue = methods.reduce((total, item) => total + item.amount, 0);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        appointments: {
+          created,
+          confirmed: counts.confirmed || 0,
+          completed,
+          canceled,
+          cancellationRate: created ? canceled / created : 0,
+          attendanceRate: attendanceEligible ? attended / attendanceEligible : 0
+        },
+        payments: {
+          receivedAmount: Math.round(revenue * 100) / 100,
+          receivedCount: methods.reduce((total, item) => total + item.count, 0),
+          byMethod: methods
+        },
+        period: { from, to }
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao gerar relatório administrativo:', error);
+    return res.status(500).json({ error: 'Não foi possível gerar o relatório.' });
+  }
+});
+
 // ==========================================
 // ROTAS: STAFF & SERVICES
 // ==========================================
@@ -519,13 +922,7 @@ app.get('/api/staff/list-by-company', async (req, res) => {
   } catch { return res.status(200).json({ staff: [] }); }
 });
 
-//app.get('/api/services/list-by-company', async (req, res) => {
- // try {
- //   const { companyId } = req.query;
-  //  const services = await Service.find({ companyId, isActive: true });
-  //  return res.status(200).json({ success: true, services: services });
- // } catch (e) { return res.status(200).json({ services: [] }); }
-//});
+
 // ==========================================
 // ROTA: LISTAR SERVIÇOS POR EMPRESA
 // ==========================================
@@ -553,11 +950,23 @@ app.get('/api/services/list-by-company', async (req, res) => {
 
 app.post('/api/services/create', authenticate, requireAdmin, requireCompanyScope, async (req, res) => {
   try {
-    const { name, description, durationInMinutes, price } = req.body;
+    // 1. Desestruturamos a imageUrl enviada pelo Front-end
+    const { name, description, durationInMinutes, price, imageUrl } = req.body;
     const companyId = req.auth.companyId;
+    
     if (!name || !durationInMinutes) {
       return res.status(400).json({ error: 'Empresa, nome e duração são obrigatórios.' });
     }
+
+    // --- NOVA VALIDAÇÃO PARA A IMAGEM DO SERVIÇO ---
+    let validatedImageUrl = null;
+    if (imageUrl !== undefined && imageUrl !== null) {
+      if (typeof imageUrl !== 'string' || !imageUrl.trim()) {
+        return res.status(400).json({ error: 'A URL da imagem informada é inválida.' });
+      }
+      validatedImageUrl = imageUrl.trim();
+    }
+    // -----------------------------------------------
 
     const newService = await Service.create({
       companyId,
@@ -565,12 +974,16 @@ app.post('/api/services/create', authenticate, requireAdmin, requireCompanyScope
       description: description || '',
       durationInMinutes: parseInt(durationInMinutes, 10),
       price: parseFloat(price) || 0,
-      isActive: true
+      isActive: true,
+      imageUrl: validatedImageUrl // 2. Salvamos a URL da foto recebida
     });
 
     return res.status(201).json({ success: true, data: newService });
-  } catch (e) { return res.status(500).json({ error: e.message }); }
+  } catch (e) { 
+    return res.status(500).json({ error: e.message }); 
+  }
 });
+
 
 // ==========================================
 // ROTA: CRIAR PROFISSIONAL (STAFF)
@@ -719,7 +1132,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-
+//Rota de Busca de Agendamentos do Cliente
 app.get('/api/cliente/meus-agendamentos', authenticate, requireCustomer, async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.auth.userId)) {
@@ -785,7 +1198,178 @@ app.delete('/api/cliente/cancelar/:id', authenticate, requireCustomer, async (re
   }
 });
 
+//Rota do MercadoPago
+app.post('/api/webhooks/mercado-pago',cors(), async (req, res) => {
+  try {
+    const notificationType = req.query.type || req.query.topic || req.body?.type || req.body?.topic;
+    if (notificationType !== 'payment') {
+      return res.status(200).send('Evento ignorado.');
+    }
+
+    const paymentId = req.query['data.id'] ||
+      req.query.id ||
+      req.body?.data?.id ||
+      req.body?.id;
+    const companyId = req.query.companyId || req.body?.company_id;
+    if (!paymentId || !mongoose.isValidObjectId(companyId)) {
+      return res.status(400).send('Identificadores do pagamento ou da empresa inválidos.');
+    }
+
+    const company = await Company.findById(companyId)
+      .select('+settings.mercadoPagoAccessToken')
+      .lean();
+    if (!company) return res.status(404).send('Empresa não encontrada.');
+    if (!company.settings?.mercadoPagoAccessToken) {
+      console.error(`Empresa ${companyId} não possui credencial do Mercado Pago.`);
+      return res.status(503).send('Credencial do Mercado Pago indisponível.');
+    }
+
+    const paymentClient = new MPPayment(new MercadoPagoConfig({
+      accessToken: company.settings.mercadoPagoAccessToken
+    }));
+    const payment = await paymentClient.get({ id: String(paymentId) });
+    const appointmentId = payment.external_reference;
+    if (!mongoose.isValidObjectId(appointmentId)) {
+      console.warn(`Pagamento Mercado Pago ${paymentId} sem referência de agendamento válida.`);
+      return res.status(200).send('Pagamento sem referência reconhecida.');
+    }
+
+    const appointment = await Appointment.findOne({
+      _id: appointmentId,
+      companyId
+    });
+    if (!appointment) {
+      console.warn(`Pagamento ${paymentId} não corresponde a um agendamento da empresa ${companyId}.`);
+      return res.status(200).send('Agendamento não encontrado.');
+    }
+
+    const amountMatches = Number.isFinite(Number(payment.transaction_amount)) &&
+      Math.round(Number(payment.transaction_amount) * 100) === Math.round(Number(appointment.paymentAmount) * 100);
+    const currencyMatches = payment.currency_id === appointment.paymentCurrency;
+    const preferenceMatches = !payment.preference_id ||
+      String(payment.preference_id) === appointment.gatewayPreferenceId;
+    if (!amountMatches || !currencyMatches || !preferenceMatches) {
+      console.error(`Pagamento ${paymentId} não confere com o valor, moeda ou preferência do agendamento ${appointment._id}.`);
+      return res.status(200).send('Pagamento não corresponde ao agendamento.');
+    }
+
+    if (
+      payment.status === 'approved' &&
+      ['pending', 'confirmed', 'completed', 'canceled'].includes(appointment.status) &&
+      appointment.paymentStatus !== 'paid'
+    ) {
+      if (appointment.status === 'pending') {
+        const overlappingAppointment = await Appointment.exists({
+          companyId,
+          professionalId: appointment.professionalId,
+          _id: { $ne: appointment._id },
+          ...activeAppointmentFilter(),
+          startTime: { $lt: appointment.endTime },
+          endTime: { $gt: appointment.startTime }
+        });
+
+        if (overlappingAppointment) {
+          await Appointment.updateOne(
+            { _id: appointment._id, companyId, status: 'pending', paymentStatus: { $ne: 'paid' } },
+            {
+              $set: {
+                paymentStatus: 'paid',
+                paymentMethod: 'mercado_pago',
+                paymentReceivedAt: new Date(payment.date_approved || Date.now()),
+                paymentReceivedAmount: Number(payment.transaction_amount),
+                gatewayPaymentId: String(paymentId)
+              }
+            }
+          );
+          console.error(`Pagamento ${paymentId} aprovado para horário ocupado; agendamento ${appointment._id} precisa de conciliação.`);
+          return res.status(200).send('Pagamento recebido para conciliação.');
+        }
+      }
+
+      await Appointment.updateOne(
+        {
+          _id: appointment._id,
+          companyId,
+          status: appointment.status,
+          paymentStatus: { $ne: 'paid' }
+        },
+        {
+          $set: {
+            ...(appointment.status === 'pending' ? { status: 'confirmed' } : {}),
+            paymentStatus: 'paid',
+            paymentMethod: 'mercado_pago',
+            paymentReceivedAt: new Date(payment.date_approved || Date.now()),
+            paymentReceivedAmount: Number(payment.transaction_amount),
+            gatewayPaymentId: String(paymentId)
+          }
+        }
+      );
+      console.log(`Pagamento ${paymentId} aprovado para o agendamento confirmado ${appointment._id}.`);
+    }
+
+  } catch {
+    console.error("Erro crítico no processamento do webhook do Mercado Pago.");
+    return res.status(500).send('Erro ao processar notificação.');
+  }
+  return res.status(200).send('OK');
+});
 
 
+
+// Upload de imagens autenticado para logo, banner e imagem de serviço.
+import { put } from '@vercel/blob';
+
+app.post(
+  '/api/upload',
+  authenticate,
+  requireAdmin,
+  express.raw({ type: 'image/*', limit: '4mb' }),
+  async (req, res) => {
+    try {
+      const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+      if (!blobToken) {
+        return res.status(500).json({ error: "Variável BLOB_READ_WRITE_TOKEN não configurada no servidor." });
+      }
+
+      const contentType = req.get('content-type')?.split(';', 1)[0].trim().toLowerCase();
+      const extensionsByType = {
+        'image/jpeg': 'jpg',
+        'image/png': 'png',
+        'image/webp': 'webp'
+      };
+      const extension = extensionsByType[contentType];
+
+      if (!extension) {
+        return res.status(415).json({ error: 'Formato de imagem não suportado. Use JPEG, PNG ou WebP.' });
+      }
+
+      if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+        return res.status(400).json({ error: "Nenhum dado de arquivo foi recebido." });
+      }
+
+      const blob = await put(
+        `${req.auth.companyId}/${crypto.randomUUID()}.${extension}`,
+        req.body,
+        {
+          access: 'public',
+          token: blobToken,
+          contentType
+        }
+      );
+
+      return res.status(200).json({ url: blob.url });
+    } catch (error) {
+      console.error("Erro no upload do servidor:", error.message);
+      return res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+app.use('/api/upload', (error, req, res, next) => {
+  if (error.type === 'entity.too.large') {
+    return res.status(413).json({ error: 'A imagem deve ter no máximo 4 MB.' });
+  }
+  return next(error);
+});
 
 export default app;

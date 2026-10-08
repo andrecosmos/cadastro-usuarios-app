@@ -127,6 +127,63 @@
   gap: 1rem;
 }
 
+.reportMetricsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.reportFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.reportFilters label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.revenueTotal {
+  margin: 0.75rem 0 0;
+  color: #059669;
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.paymentBreakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.paymentBreakdownRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.75rem;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.paymentBreakdownRow strong {
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+.reportNote {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
 .metricCard {
   background-color: #ffffff;
   padding: 1.25rem;
@@ -351,7 +408,7 @@
 @media (min-width: 768px) {
 
   .menuFlex {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .menuBtn {
@@ -365,6 +422,10 @@
   .sectionFlex {
     flex-direction: row;
     align-items: center;
+  }
+
+  .reportMetricsGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
 }
@@ -406,4 +467,7 @@
     font-size: 1.5rem;
   }
 
+  .reportMetricsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

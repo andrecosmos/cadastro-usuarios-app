@@ -10,6 +10,16 @@ Cadastros e agendamentos públicos continuam sem autenticação. Operações adm
 
 Execute `npm test` para os testes do middleware de autenticação.
 
+## Checkout do Mercado Pago
+
+Cada empresa deve cadastrar o token de acesso da própria conta Mercado Pago em **Configurações** no painel administrativo. O token é mantido apenas no servidor e nunca é retornado pela API pública.
+
+Configure `PUBLIC_APP_URL` no ambiente da API com apenas a origem pública HTTPS da aplicação (por exemplo, `https://agenda.example.com`, sem caminho). Na Vercel, `VERCEL_URL` é usado como alternativa. O Mercado Pago envia as notificações para `/api/webhooks/mercado-pago`; em desenvolvimento local, exponha a porta `3000` por um túnel HTTPS e use a URL do túnel em `PUBLIC_APP_URL` para que ele alcance o Vite e o proxy da API. Depois de alterar `.env.local`, reinicie a API.
+
+Agendamentos feitos por clientes são confirmados independentemente do pagamento. Quando o estabelecimento configurou o Mercado Pago e a aplicação tem uma URL pública HTTPS, o cliente pode pagar pelo checkout durante o agendamento ou mais tarde pela Minha Conta. Também pode pagar diretamente no estabelecimento. A aprovação do checkout atualiza o status de pagamento sem alterar a confirmação do horário. Agendamentos administrativos continuam sem iniciar checkout.
+
+No painel administrativo, a aba **Relatórios** exibe contagens de agendamentos por status e faturamento recebido no período selecionado. O faturamento considera somente pagamentos registrados: aprovações do Mercado Pago ou pagamentos presenciais registrados no cartão do agendamento com método Pix, dinheiro ou cartão. O registro presencial usa o valor do serviço salvo no agendamento e grava a data/hora de recebimento.
+
 ## Interface
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

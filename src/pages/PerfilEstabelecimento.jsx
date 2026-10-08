@@ -4,15 +4,14 @@ import styles from './PerfilEstabelecimento.module.css';
 
 export default function PerfilEstabelecimento({ company, services, onSelectService }) {
   const navigate = useNavigate();
-  
 
- 
   return (
     <div className={styles.profileWrapper}>
       {/* 🏙️ TOPO PREMIUM: Banner e Capa */}
       <div className={styles.coverBanner}>
-        {company?.coverUrl ? (
-          <img src={company.coverUrl} alt="Capa" className={styles.coverImage} />
+        {/* Atualizado para ler o 'bannerUrl' salvo pelo Vercel Blob */}
+        {company?.bannerUrl ? (
+          <img src={company.bannerUrl} alt="Capa" className={styles.coverImage} />
         ) : (
           <div className={styles.coverGradient} />
         )}
@@ -21,8 +20,9 @@ export default function PerfilEstabelecimento({ company, services, onSelectServi
       {/* 👤 INFOS DO NEGÓCIO: Foto de perfil e Gatilhos de Confiança */}
       <div className={styles.businessHeader}>
         <div className={styles.avatarWrapper}>
-          {company?.logo ? (
-            <img src={company.logo} alt={company.name} className={styles.logoImage} />
+          {/* Atualizado para ler o 'logoUrl' salvo pelo Vercel Blob */}
+          {company?.logoUrl ? (
+            <img src={company.logoUrl} alt={company.name} className={styles.logoImage} />
           ) : (
             <div className={styles.logoPlaceholder}>{company?.name?.charAt(0).toUpperCase()}</div>
           )}
@@ -51,6 +51,19 @@ export default function PerfilEstabelecimento({ company, services, onSelectServi
           <div className={styles.servicesGrid}>
             {services.map(service => (
               <div key={service._id} className={styles.serviceItemCard}>
+                
+                {/* [NOVO] Renderiza a foto do serviço à esquerda se ela existir no banco */}
+                {service.imageUrl && (
+                  <div className={styles.serviceImageLeftWrapper}>
+                    <img 
+                      src={service.imageUrl} 
+                      alt={service.name} 
+                      className={styles.serviceItemImage}
+                      style={{ width: '80px', height: '80px', borderRadius: '8px', objectFit: 'cover', marginRight: '15px' }}
+                    />
+                  </div>
+                )}
+
                 <div className={styles.serviceLeft}>
                   <h3>{service.name}</h3>
                   <p className={styles.serviceDescription}>
@@ -58,7 +71,8 @@ export default function PerfilEstabelecimento({ company, services, onSelectServi
                   </p>
                   <div className={styles.serviceMeta}>
                     <span className={styles.metaDuration}>⏱️ {service.durationInMinutes} min</span>
-                    <span className={styles.metaPrice}>R\$ {service.price.toFixed(2)}</span>
+                    {/* Correção de R\$ para o formato limpo brasileiro com vírgula nos centavos */}
+                    <span className={styles.metaPrice}>R\$ {service.price.toFixed(2).replace('.', ',')}</span>
                   </div>
                 </div>
                 
@@ -77,7 +91,7 @@ export default function PerfilEstabelecimento({ company, services, onSelectServi
         )}
       </div>
 
-            {/* 🗺️ RODAPÉ INFORMATIVO */}
+      {/* 🗺️ RODAPÉ INFORMATIVO */}
       <footer className={styles.profileFooter}>
         <h3>📍 Localização e Contato</h3>
         <p>{company?.address || 'Endereço completo não informado'}</p>

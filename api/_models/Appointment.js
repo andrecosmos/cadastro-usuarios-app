@@ -18,10 +18,27 @@ const AppointmentSchema = new mongoose.Schema({
     type: String, 
     enum: ['unpaid', 'paid', 'refunded'], 
     default: 'unpaid' 
-  }
+  },
+
+  paymentMethod: {
+    type: String,
+    enum: ['mercado_pago', 'pix', 'cash', 'card', null],
+    default: null
+  },
+  paymentReceivedAt: { type: Date, default: null },
+  paymentReceivedAmount: { type: Number, default: null },
+  gatewayPreferenceId: { type: String, default: null },
+  gatewayCheckoutUrl: { type: String, default: null },
+  gatewayPaymentId: { type: String, default: null },
+  paymentAmount: { type: Number, default: null },
+  paymentCurrency: { type: String, default: 'BRL' },
+  paymentExpiresAt: { type: Date, default: null }
+
 }, { timestamps: true });
 
 // Cria um índice composto para agilizar buscas por horários específicos de um profissional naquela empresa
 AppointmentSchema.index({ companyId: 1, professionalId: 1, startTime: 1 });
+AppointmentSchema.index({ companyId: 1, createdAt: 1, status: 1 });
+AppointmentSchema.index({ companyId: 1, paymentStatus: 1, paymentReceivedAt: 1 });
 
 export const Appointment = mongoose.models.Appointment || mongoose.model('Appointment', AppointmentSchema);

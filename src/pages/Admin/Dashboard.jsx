@@ -58,6 +58,36 @@ export default function Dashboard() {
 
     const companyId = company?._id;
     const [refreshVersion, setRefreshVersion] = useState(0);
+    const today = new Date();
+    const [reportFrom, setReportFrom] = useState(
+        format(new Date(today.getFullYear(), today.getMonth(), 1), 'yyyy-MM-dd')
+    );
+    const [reportTo, setReportTo] = useState(format(today, 'yyyy-MM-dd'));
+    const [reportData, setReportData] = useState(null);
+    const [reportLoading, setReportLoading] = useState(false);
+    const [reportError, setReportError] = useState('');
+
+    useEffect(() => {
+        if (!companyId || activeMenu !== 'reports') return;
+
+        let isCurrentRequest = true;
+        appointmentService.getReportSummary(companyId, reportFrom, reportTo)
+            .then((response) => {
+                if (isCurrentRequest) setReportData(response.data);
+            })
+            .catch((error) => {
+                if (!isCurrentRequest) return;
+                setReportData(null);
+                setReportError(error.message || 'Erro ao carregar os relatórios.');
+            })
+            .finally(() => {
+                if (isCurrentRequest) setReportLoading(false);
+            });
+
+        return () => {
+            isCurrentRequest = false;
+        };
+    }, [companyId, activeMenu, reportFrom, reportTo, refreshVersion]);
 
     useEffect(() => {
         if (!companyId || activeMenu !== 'dashboard') return;
@@ -166,6 +196,15 @@ export default function Dashboard() {
 
         }
 
+    }
+
+    async function handleRegisterPayment(appointmentId, method) {
+        try {
+            await appointmentService.recordAppointmentPayment(appointmentId, method);
+            setRefreshVersion((version) => version + 1);
+        } catch (error) {
+            alert(error.message || 'Erro ao registrar pagamento.');
+        }
     }
 
 
@@ -360,7 +399,7 @@ export default function Dashboard() {
                 CARDS / MÉTRICAS
             ================================================= */}
 
-            <div className={styles.metricsGrid}>
+            {activeMenu !== 'reports' && <div className={styles.metricsGrid}>
                 {[
                     { key: 'total', label: 'Total', value: metrics.total, tone: styles.textTotal },
                     { key: 'pending', label: 'Pendentes', value: metrics.pending, tone: styles.textPending },
@@ -376,7 +415,7 @@ export default function Dashboard() {
                         </p>
                     </div>
                 ))}
-            </div>
+            </div>}
 
 
             {/* =================================================
@@ -401,6 +440,22 @@ export default function Dashboard() {
                         }`}
                     >
                         📊 Visão Geral
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setReportLoading(true);
+                            setReportError('');
+                            setActiveMenu('reports');
+                        }}
+                        className={`${styles.menuBtn} ${
+                            activeMenu === 'reports'
+                                ? styles.menuBtnActive
+                                : styles.menuBtnInactive
+                        }`}
+                    >
+                        📈 Relatórios
                     </button>
 
 
@@ -516,6 +571,7 @@ export default function Dashboard() {
                         loading={currentLoading}
                         error={currentError}
                         onStatusChange={handleStatusChange}
+                        onRegisterPayment={handleRegisterPayment}
                     />
 
                 </section>
@@ -566,10 +622,109 @@ export default function Dashboard() {
                         loading={currentLoading}
                         error={currentError}
                         onStatusChange={handleStatusChange}
+                        onRegisterPayment={handleRegisterPayment}
                     />
 
                 </section>
 
+            )}
+
+            {activeMenu === 'reports' && (
+                <section className={styles.sectionGrid}>
+                    <div className={styles.sectionCard}>
+                        <h2 className={styles.sectionTitle}>Relatórios de agendamentos e pagamentos</h2>
+                        <p className={styles.headerSubtitle}>
+                            Os status consideram agendamentos criados no período; faturamento considera pagamentos recebidos no período.
+                        </p>
+                        <div className={styles.reportFilters}>
+                            <label>
+                                De
+                                <input
+                                    type="date"
+                                    value={reportFrom}
+                                    onChange={(event) => {
+                                        setReportLoading(true);
+                                        setReportError('');
+                                        setReportFrom(event.target.value);
+                                    }}
+                                    className={styles.dateInput}
+                                />
+                            </label>
+                            <label>
+                                Até
+                                <input
+                                    type="date"
+                                    value={reportTo}
+                                    onChange={(event) => {
+                                        setReportLoading(true);
+                                        setReportError('');
+                                        setReportTo(event.target.value);
+                                    }}
+                                    className={styles.dateInput}
+                                />
+                            </label>
+                        </div>
+                    </div>
+
+                    {reportLoading ? (
+                        <div className={styles.sectionCard}>Carregando relatórios...</div>
+                    ) : reportError ? (
+                        <div className={styles.sectionCard} role="alert">{reportError}</div>
+                    ) : reportData ? (
+                        <>
+                            <div className={styles.reportMetricsGrid}>
+                                {[
+                                    { key: 'created', label: 'Criados', value: reportData.appointments.created, tone: styles.textTotal },
+                                    { key: 'confirmed', label: 'Confirmados', value: reportData.appointments.confirmed, tone: styles.textPending },
+                                    { key: 'completed', label: 'Concluídos', value: reportData.appointments.completed, tone: styles.textCompleted },
+                                    { key: 'canceled', label: 'Cancelados', value: reportData.appointments.canceled, tone: styles.textCanceled },
+                                    { key: 'cancellationRate', label: 'Taxa de cancelamento', value: `${(reportData.appointments.cancellationRate * 100).toFixed(1)}%`, tone: styles.textCanceled },
+                                    { key: 'attendanceRate', label: 'Comparecimento*', value: `${(reportData.appointments.attendanceRate * 100).toFixed(1)}%`, tone: styles.textCompleted }
+                                ].map((metric) => (
+                                    <div className={styles.metricCard} key={metric.key}>
+                                        <p className={`${styles.metricLabel} ${metric.tone}`}>{metric.label}</p>
+                                        <p className={`${styles.metricValue} ${metric.tone}`}>{metric.value}</p>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className={styles.sectionCard}>
+                                <h3 className={styles.sectionTitle}>Pagamentos recebidos</h3>
+                                <p className={styles.revenueTotal}>
+                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
+                                        .format(reportData.payments.receivedAmount)}
+                                </p>
+                                <p className={styles.headerSubtitle}>
+                                    {reportData.payments.receivedCount} pagamento(s) registrado(s).
+                                </p>
+                                <div className={styles.paymentBreakdown}>
+                                    {[
+                                        ['mercado_pago', 'Online (Mercado Pago)'],
+                                        ['pix', 'Pix no estabelecimento'],
+                                        ['cash', 'Dinheiro'],
+                                        ['card', 'Cartão no estabelecimento'],
+                                        ['unknown', 'Método não identificado']
+                                    ].map(([method, label]) => {
+                                        const payment = reportData.payments.byMethod.find((item) => item.method === method);
+                                        if (!payment) return null;
+                                        return (
+                                            <div className={styles.paymentBreakdownRow} key={method}>
+                                                <span>{label} ({payment.count})</span>
+                                                <strong>
+                                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
+                                                        .format(payment.amount)}
+                                                </strong>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                            <p className={styles.reportNote}>
+                                * Comparecimento = concluídos / concluídos e confirmados já vencidos. Agendamentos futuros não entram no cálculo.
+                            </p>
+                        </>
+                    ) : null}
+                </section>
             )}
 
 

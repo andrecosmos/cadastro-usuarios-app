@@ -19,6 +19,11 @@ export const appointmentService = {
   createCompany: (companyData) => api.post('/api/companies/create', companyData),
   updateCompany: (companyId, companyData) => api.patch('/api/companies/update', { companyId, ...companyData }),
   getCompanyBySlug: (slug) => api.get(`/api/companies/get-by-slug?slug=${slug}`),
+  uploadImage: (imageFile) => api.post('/api/upload', imageFile, {
+    headers: {
+      'Content-Type': imageFile.type
+    }
+  }),
 
   // ==========================================
   // SERVIÇOS
@@ -37,13 +42,17 @@ export const appointmentService = {
   createAppointment: (appointmentData) => api.post('/api/appointments/create', appointmentData),
   listAppointments: (companyId, date) => api.get('/api/appointments/list', { params: { companyId, date } }),
   updateStatus: (appointmentId, companyId, status) => api.patch('/api/appointments/update-status', { appointmentId, companyId, status }),
+  recordAppointmentPayment: (appointmentId, method) =>
+    api.patch('/api/appointments/record-payment', { appointmentId, method }),
+  getReportSummary: (companyId, from, to) =>
+    api.get('/api/reports/summary', { params: { companyId, from, to } }),
   
  
-  getCustomerAppointments: () =>
-    api.get('/api/cliente/meus-agendamentos'),
+  getCustomerAppointments: () =>api.get('/api/cliente/meus-agendamentos'),
 
-  cancelAppointmentByCustomer: (appointmentId) =>
-    api.delete(`/api/cliente/cancelar/${appointmentId}`),
+  cancelAppointmentByCustomer: (appointmentId) =>api.delete(`/api/cliente/cancelar/${appointmentId}`),
+
+  updateAppointmentByCustomer: (appointmentId, status) => api.patch(`/api/cliente/alterar/${appointmentId}`,{status}),
 
   // ==========================================
   // PROFISSIONAIS

@@ -11,6 +11,12 @@ import styles from './App.module.css';
 import PerfilEstabelecimento from './pages/PerfilEstabelecimento'; 
 import { gerarLinkWhatsApp } from './hooks/whatsappHelper'; // Importando a função do helper
 
+const checkoutReturnMessages = {
+  success: 'Retorno recebido. O Mercado Pago está validando o pagamento; consulte Minha Conta para acompanhar a confirmação.',
+  pending: 'O pagamento está pendente. O agendamento só será confirmado após a validação do Mercado Pago.',
+  failure: 'O checkout foi encerrado sem confirmação. A reserva temporária será liberada após o prazo de pagamento.'
+};
+
 export default function App() {
   const { companySlug } = useParams();
   const navigate = useNavigate();
@@ -39,6 +45,9 @@ export default function App() {
 const [confirmedData, setConfirmedData] = useState(null);
 // Controla o estado de envio do agendamento para o backend
 const [submittingBooking, setSubmittingBooking] = useState(false);
+const checkoutReturnMessage = checkoutReturnMessages[
+  new URLSearchParams(location.search).get('checkout_return')
+] || '';
 
 
 
@@ -183,7 +192,8 @@ const [submittingBooking, setSubmittingBooking] = useState(false);
             profissional: staffList.find(st => st._id === selectedStaff)?.name || 'Profissional Selecionado',
             data: selectedDate,
             horario: formatBusinessTime(dateTimeIso),
-            duracao: services.find(s => s._id === selectedService)?.durationInMinutes || 30
+            duracao: services.find(s => s._id === selectedService)?.durationInMinutes || 30,
+            checkoutUrl: response.checkoutUrl
           };
 
             setConfirmedData(dadosDoAgendamento);
@@ -207,6 +217,14 @@ const [submittingBooking, setSubmittingBooking] = useState(false);
   }
 }
 
+  function handleFinishBooking() {
+    setSelectedService('');
+    setSelectedStaff('');
+    setSelectedSlot(null);
+    setConfirmedData(null);
+    setStep('perfil');
+  }
+
 
   // 🌟 NOVO EFFECT: Escuta o retorno do login e reconstrói o formulário na hora
   useEffect(() => {
@@ -229,9 +247,6 @@ const [submittingBooking, setSubmittingBooking] = useState(false);
     }
   }, [location]);
 
-
-  
-
   const dateFormatted = format(new Date(selectedDate + 'T12:00:00'), "EEEE, dd 'de' MMMM", { locale: ptBR });
 
   if (loadingCompany) {
@@ -242,6 +257,7 @@ const [submittingBooking, setSubmittingBooking] = useState(false);
     return <div className={styles.errorScreen}>⚠️ {error}</div>;
   }
   
+
 
   return (
     <div className={styles.pageWrapper}>
@@ -270,6 +286,12 @@ const [submittingBooking, setSubmittingBooking] = useState(false);
       )}
 
       </header>
+
+      {checkoutReturnMessage && (
+        <div className={styles.alertSuccess} role="status">
+          {checkoutReturnMessage}
+        </div>
+      )}
       
       {/* TELA 1: PERFIL */}
       {/* 🌟 TELA 1: PERFIL DO ESTABELECIMENTO (NOVO COMPONENTE) */}
@@ -303,33 +325,46 @@ const [submittingBooking, setSubmittingBooking] = useState(false);
             {successMessage && <div className={styles.alertSuccess}>✅ {successMessage}</div>}
 
             {/* 1. SELEÇÃO DE SERVIÇO EM CARDS */}
-            <div className={styles.inputField}>
-              <label className={styles.fieldLabel}>1. Selecione o Serviço:</label>
-              <div className={styles.servicesGridList}>
-                {services.map(s => {
-                  const isSelected = selectedService === s._id;
-                  return (
-                    <div 
-                      key={s._id}
-                      className={`${styles.serviceSelectCard} ${isSelected ? styles.cardActive : ''}`}
-                      onClick={() => {
-                        setSelectedService(s._id);
-                        setSelectedSlot(null); // Limpa o horário se mudar o serviço
-                        setAvailableSlots([]);
-                      }}
-                    >
-                      <div className={styles.serviceInfoLeft}>
-                        <h3>{s.name}</h3>
-                        <span>⏱️ {s.durationInMinutes} min</span>
-                      </div>
-                      <div className={styles.servicePriceRight}>
-                        <strong>R\$ {s.price.toFixed(2)}</strong>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            {/* 1. SELEÇÃO DE SERVIÇO EM CARDS */}
+<div className={styles.inputField}>
+  <label className={styles.fieldLabel}>1. Selecione o Serviço:</label>
+  <div className={styles.servicesGridList}>
+    {services.map(s => {
+      const isSelected = selectedService === s._id;
+      return (
+        <div 
+          key={s._id}
+          className={`${styles.serviceSelectCard} ${isSelected ? styles.cardActive : ''}`}
+          onClick={() => {
+            setSelectedService(s._id);
+            setSelectedSlot(null); // Limpa o horário se mudar o serviço
+            setAvailableSlots([]);
+          }}
+        >
+          {/* Nova miniatura da imagem se houver URL válida */}
+          {s.imageUrl && (
+            <img 
+              src={s.imageUrl} 
+              alt={s.name} 
+              className={styles.serviceThumbnail}
+              style={{ width: '50px', height: '50px', borderRadius: '6px', objectFit: 'cover', marginRight: '12px' }}
+            />
+          )}
+          
+          <div className={styles.serviceInfoLeft}>
+            <h3>{s.name}</h3>
+            <span>⏱️ {s.durationInMinutes} min</span>
+          </div>
+          <div className={styles.servicePriceRight}>
+            {/* Correção de R\$ para o formato limpo com vírgula */}
+            <strong>R\$ {s.price.toFixed(2).replace('.', ',')}</strong>
+          </div>
+        </div>
+      );
+    })}
+  </div>
+</div>
+
 
             {/* 2. SELEÇÃO DE PROFISSIONAL EM CARDS */}
             <div className={styles.inputField}>
@@ -436,10 +471,12 @@ const [submittingBooking, setSubmittingBooking] = useState(false);
               <div className={styles.successCheckmark}>✓</div>
             </div>
 
-            <span className={styles.successBadge}>TUDO CERTO!</span>
+            <span className={styles.successBadge}>AGENDAMENTO CONFIRMADO</span>
             <h1>Agendamento Confirmado!</h1>
             <p className={styles.successSubtitle}>
-              Seu horário foi reservado com sucesso no estabelecimento <strong>{company?.name}</strong>.
+              {confirmedData.checkoutUrl
+                ? <>Seu horário está confirmado no estabelecimento <strong>{company?.name}</strong>. Você pode pagar pelo checkout agora ou depois pela Minha Conta, ou diretamente no estabelecimento.</>
+                : <>Seu horário está confirmado no estabelecimento <strong>{company?.name}</strong>. O pagamento poderá ser feito diretamente no estabelecimento.</>}
             </p>
 
               
@@ -463,46 +500,61 @@ const [submittingBooking, setSubmittingBooking] = useState(false);
               </div>
               <div className={styles.ticketRow}>
                 <span>Duração:</span>
-                <span>{confirmedData.duracao} minutos</span>
+                <span>{confirmedData.duracao} min</span>
               </div>
             </div>
 
             {/* Bloco de avisos importantes (Gera segurança psicológica) */}
             <div className={styles.reminderBox}>
-              💡 <strong>Lembrete:</strong> Enviamos uma confirmação para o seu WhatsApp. Caso precise cancelar ou reagendar, faça com pelo menos 2 horas de antecedência.
+              {confirmedData.checkoutUrl
+                ? <>💡 O horário já está confirmado. Escolha pagar pelo checkout agora, depois pela <strong>Minha Conta</strong>, ou no estabelecimento no dia do atendimento.</>
+                : <>💡 O horário já está confirmado. O pagamento será feito no estabelecimento, no dia do atendimento.</>}
             </div>
 
             {/* Ações Finais */}
             <div className={styles.successActionsGrid}>
-              <a
-                href={`https://google.com{encodeURIComponent(confirmedData.servico + ' - ' + company?.name)}&dates=${confirmedData.data.replace(/-/g, '')}T${confirmedData.horario.replace(/:/g, '')}00Z/${confirmedData.data.replace(/-/g, '')}T${confirmedData.horario.replace(/:/g, '')}00Z&details=${encodeURIComponent('Agendamento realizado pelo sistema Agenda.')}`}
-                target="_blank"
-                rel="noreferrer"
-                className={styles.btnCalendar}
-              >
-                📅 Adicionar ao Google Agenda
-              </a>
-
-              <button
-                type="button"
-                className={styles.btnRestart}
-                onClick={() => {
-                  // Limpa todos os estados para permitir um novo agendamento limpo se o usuário quiser
-                  setSelectedService('');
-                  setSelectedStaff('');
-                  setSelectedSlot(null);
-                  setConfirmedData(null);
-                  setStep('perfil');
-                }}
-              >
-                Voltar para o Início
-              </button>
+              {confirmedData.checkoutUrl && (
+                <>
+                  <a
+                    href={confirmedData.checkoutUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.btnCalendar}
+                  >
+                    Ir para o Pagamento
+                  </a>
+                  <button
+                    type="button"
+                    className={styles.btnRestart}
+                    onClick={() => navigate(`/${companySlug}/minha-conta`)}
+                  >
+                    Acessar Minha Conta para pagar depois
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.btnRestart}
+                    onClick={handleFinishBooking}
+                  >
+                    Pagar no estabelecimento
+                  </button>
+                </>
+              )}
+              
+              {!confirmedData.checkoutUrl && (
+                <button
+                  type="button"
+                  className={styles.btnRestart}
+                  onClick={handleFinishBooking}
+                >
+                  Voltar para o Início
+                </button>
+              )}
             </div>
 
             <div className={styles.profileFooter}>
               <button onClick={handleNotificarWhatsApp} className={styles.btnWhatsapp}>
                 <FaWhatsapp style={{ marginRight: '8px' }} /> 
-                Receber Lembrete via  WhatsApp
+                Receber Lembrete via WhatsApp
               </button> 
              </div>
 

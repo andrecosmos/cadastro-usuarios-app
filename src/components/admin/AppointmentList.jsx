@@ -7,7 +7,8 @@ export default function AppointmentList({
     appointments,
     loading,
     error,
-    onStatusChange
+    onStatusChange,
+    onRegisterPayment
 }) {
 
     if (loading) {
@@ -41,6 +42,7 @@ export default function AppointmentList({
                     key={appointment._id}
                     appointment={appointment}
                     onStatusChange={onStatusChange}
+                    onRegisterPayment={onRegisterPayment}
                 />
             ))}
         </div>

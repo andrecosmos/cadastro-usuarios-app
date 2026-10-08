@@ -6,7 +6,11 @@ const ServiceSchema = new mongoose.Schema({
   description: { type: String },
   durationInMinutes: { type: Number, required: true }, // ex: 30, 45, 60
   price: { type: Number, required: true },
-  isActive: { type: Boolean, default: true }
+  isActive: { type: Boolean, default: true },
+  
+  // --- NOVO CAMPO PARA A FOTO DO SERVIÇO ---
+  imageUrl: { type: String, default: null } 
+  // ------------------------------------------
 }, { timestamps: true });
 
 export const Service = mongoose.models.Service || mongoose.model('Service', ServiceSchema);

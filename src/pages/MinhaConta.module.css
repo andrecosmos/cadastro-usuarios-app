@@ -12,7 +12,7 @@
   align-items: center;
   padding: 16px 40px;
   background-color: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #121213;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
@@ -234,7 +234,7 @@
 /* Rodapés dos cards */
 .cardFooterFuture, .cardFooterPast {
   padding: 12px 20px;
-  background-color: #ffffff;
+  background-color: #c2cbff;
   border-top: 1px dashed #e2e8f0;
   display: flex;
   justify-content: flex-end;
@@ -260,6 +260,29 @@
   font-size: 13px;
   font-weight: 600;
   color: #10b981;
+}
+
+.paymentStatus {
+  margin-top: 8px;
+  color: #92400e;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.btnPayNow {
+  display: inline-block;
+  margin-right: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background-color: #2563eb;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.btnPayNow:hover {
+  background-color: #1d4ed8;
 }
 
 /* Deixa cartões passados com aspecto secundário */
@@ -370,6 +393,49 @@
   color: #166534;
   border: 1px solid #86efac;
 }
+
+
+
+/* O Botão de Novo Agendamento */
+.btnNewAppointment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px; /* Espaço entre o ícone/emoji e o texto */
+  
+  /* Cores (pode alterar para combinar com a paleta do seu app) */
+  background-color: #0070f3; /* Azul moderno, mude para a cor principal da sua marca */
+  color: #ffffff;
+  
+  /* Tipografia e Espaçamento */
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 10px 20px;
+  
+  /* Bordas e Estilo */
+  border: none;
+  border-radius: 8px;
+  text-decoration: none; /* Remove o sublinhado do link */
+  cursor: pointer;
+  
+  /* Transição suave para o efeito de hover */
+  transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+}
+
+/* Efeito ao passar o mouse por cima (Hover) */
+.btnNewAppointment:hover {
+  background-color: #0056b3; /* Um tom mais escuro da cor principal */
+  box-shadow: 0 4px 12px rgba(0, 112, 243, 0.25); /* Sombra suave com a cor do botão */
+}
+
+/* Efeito ao clicar no botão (Active) */
+.btnNewAppointment:active {
+  transform: scale(0.98); /* Dá um leve efeito de clique diminuindo milimetricamente */
+}
+
+
+
+
 
 /* --- ANIMAÇÃO --- */
 @keyframes fadeIn {

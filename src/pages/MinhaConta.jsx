@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Link ,useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { appointmentService } from '../services/appointmentService';
 import { formatBusinessDate, formatBusinessTime } from '../../shared/dateTime.js';
@@ -85,20 +85,23 @@ export default function MinhaConta() {
 
 
 
-  async function handleCancelarHorario(appointmentId) {
-    if (!window.confirm('Tem certeza que deseja cancelar este agendamento?')) return;
+  // 1. FUNÇÃO DE CANCELAMENTO (Garante que some da tela de ativos)
+async function handleCancelarHorario(appointmentId) {
+  if (!window.confirm('Tem certeza que deseja cancelar este agendamento?')) return;
 
-    try {
-      // 🌟 Chama o service de exclusão passando o ID do agendamento e do cliente
-      await appointmentService.cancelAppointmentByCustomer(appointmentId, user._id);
-      
-      // Atualiza o estado local removendo o horário cancelado na hora
-      setProximosAgendamentos(prev => prev.filter(app => app._id !== appointmentId));
-      alert('Agendamento cancelado com sucesso.');
-    } catch (err) {
-      alert('Erro ao cancelar horário: ' + (err.response?.data?.message || err.message));
-    }
+  try {
+    // Chama o service (DELETE)
+    await appointmentService.cancelAppointmentByCustomer(appointmentId);
+    
+    // 🔥 Remove o card da tela de futuros imediatamente
+    setProximosAgendamentos(prev => prev.filter(app => app._id !== appointmentId));
+    
+    alert('Agendamento cancelado com sucesso.');
+  } catch (err) {
+    alert('Erro ao cancelar horário: ' + (err.response?.data?.message || err.message));
   }
+}
+
 
   async function handleSalvarPerfil(e) {
     e.preventDefault();
@@ -123,6 +126,7 @@ export default function MinhaConta() {
            {/* CABEÇALHO DO PAINEL DO CLIENTE */}
       <header className={styles.panelHeader}>
         {/* 🌟 ATUALIZADO: Redireciona para o estabelecimento ou para a home se não houver slug */}
+       
         <div 
           className={styles.headerBrand} 
           onClick={() => navigate(companySlug ? `/${companySlug}` : '/')}
@@ -131,11 +135,12 @@ export default function MinhaConta() {
           <span>JÁRESERVA</span>
           <small>Área do Cliente</small>
         </div>
-        
+    
         <div className={styles.headerActions}>
           <span className={styles.userName}>Olá, <strong>{user?.name || 'Cliente'}</strong></span>
           <button className={styles.btnLogout} onClick={handleLogoutConta}>Sair da Conta</button>
         </div>
+        
       </header>
 
 
@@ -154,6 +159,12 @@ export default function MinhaConta() {
           >
             👤 Meus Dados
           </button>
+
+           <div  className={styles.headerBrand} >
+                <Link to={`/${companySlug}`} className={styles.btnNewAppointment}>
+                 ➕ Novo Agendamento
+                </Link>
+        </div> 
         </div>
 
         {/* --- ABA 1: MEUS HORÁRIOS --- */}
@@ -168,66 +179,90 @@ export default function MinhaConta() {
             ) : (
               <div className={styles.timelineWrapper}>
                 
-                                {/* SEÇÃO: PRÓXIMOS AGENDAMENTOS BLINDADA */}
-                <div className={styles.sectionGroup}>
-                  <h2 className={styles.sectionTitle}>📌 Próximos Agendamentos</h2>
-                  {proximosAgendamentos.length === 0 ? (
-                    <p className={styles.noDataText}>Nenhum horário marcado para os próximos dias.</p>
-                  ) : (
-                    proximosAgendamentos.map(app => {
-                      // 🌟 MARGEM DE SEGURANÇA: Extrai os dados tolerando qualquer nome de chave vindo do banco
-                      const nomeEmpresa = app.companyId?.name || app.company?.name || 'Estabelecimento';
-                      const nomeServico = app.serviceId?.name || app.service?.name || 'Serviço Personalizado';
-                      const nomeProfissional = app.professionalId?.name || app.professional?.name || 'Profissional do Local';
-                      
-                      // Garante que o preço não quebre se vier nulo ou indefinido
-                      const precoOriginal = app.serviceId?.price || app.service?.price || 0;
-                      const precoFormatado = typeof precoOriginal === 'number' ? precoOriginal.toFixed(2) : '0.00';
+              {/* SEÇÃO: PRÓXIMOS AGENDAMENTOS BLINDADA */}
+                      <div className={styles.sectionGroup}>
+                        <h2 className={styles.sectionTitle}>📌 Próximos Agendamentos</h2>
+                        {proximosAgendamentos.length === 0 ? (
+                          <p className={styles.noDataText}>Nenhum horário marcado para os próximos dias.</p>
+                        ) : (
+                          proximosAgendamentos.map(app => {
+                            const nomeEmpresa = app.companyId?.name || app.company?.name || 'Estabelecimento';
+                            const nomeServico = app.serviceId?.name || app.service?.name || 'Serviço Personalizado';
+                            const nomeProfissional = app.professionalId?.name || app.professional?.name || 'Profissional do Local';
+                            
+                            const precoOriginal = app.paymentAmount ?? app.serviceId?.price ?? app.service?.price ?? 0;
+                            const precoFormatado = typeof precoOriginal === 'number' ? precoOriginal.toFixed(2) : '0.00';
 
-                      // Tratamento seguro de data para evitar quebras de fuso horário
-                      let dataExibicao = '00/00/0000';
-                      let horaExibicao = '00:00';
-                      
-                      if (app.startTime) {
-                        try {
-                          dataExibicao = formatBusinessDate(app.startTime);
-                          horaExibicao = formatBusinessTime(app.startTime);
-                        } catch (e) {
-                          // Fallback nativo simples caso o date-fns falhe com a string ISO
-                          const d = new Date(app.startTime);
-                          dataExibicao = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-                          horaExibicao = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-                        }
-                      }
+                            let dataExibicao = '00/00/0000';
+                            let horaExibicao = '00:00';
+                            
+                            if (app.startTime) {
+                              try {
+                                dataExibicao = formatBusinessDate(app.startTime);
+                                horaExibicao = formatBusinessTime(app.startTime);
+                              } catch (e) {
+                                const d = new Date(app.startTime);
+                                dataExibicao = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                                horaExibicao = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                              }
+                            }
 
-                      return (
-                        <div key={app._id} className={`${styles.appointmentCard} ${styles.cardFuture}`}>
-                          <div className={styles.cardHeader}>
-                            <span className={styles.companyName}>🏢 {nomeEmpresa}</span>
-                            <div className={styles.dateTimeBadge}>
-                              <strong>{horaExibicao}</strong>
-                              <span>{dataExibicao}</span>
-                            </div>
-                          </div>
-                          <div className={styles.cardBody}>
-                            <h3>{nomeServico}</h3>
-                            <p>Profissional: <strong>{nomeProfissional}</strong></p>
-                            <small>Preço: R\$ {precoFormatado}</small>
-                          </div>
-                          <div className={styles.cardFooterFuture}>
-                            <button 
-                              type="button" 
-                              className={styles.btnCancel}
-                              onClick={() => handleCancelarHorario(app._id)}
-                            >
-                              ❌ Cancelar Agendamento
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
+                            return (
+                              <div key={app._id} className={`${styles.appointmentCard} ${styles.cardFuture}`}>
+                                <div className={styles.cardHeader}>
+                                  <span className={styles.companyName}>🏢 {nomeEmpresa}</span>
+                                  <div className={styles.dateTimeBadge}>
+                                    <strong>{horaExibicao}</strong>
+                                    <span>{dataExibicao}</span>
+                                  </div>
+                                </div>
+                                
+                                <div className={styles.cardBody}>
+                                  <h3>{nomeServico}</h3>
+                                  <p>Profissional: <strong>{nomeProfissional}</strong></p>
+                                  <small>Preço: R\$ {precoFormatado}</small>
+                                  {app.paymentStatus === 'paid' ? (
+                                    <p className={styles.paymentStatus}>Pagamento aprovado</p>
+                                  ) : app.status === 'pending' &&
+                                    app.paymentExpiresAt &&
+                                    new Date(app.paymentExpiresAt) <= new Date() ? (
+                                    <p className={styles.paymentStatus}>Prazo para pagamento encerrado; selecione outro horário.</p>
+                                  ) : app.status === 'confirmed' ? (
+                                    <p className={styles.paymentStatus}>Agendamento confirmado; pagamento no estabelecimento ou pelo checkout</p>
+                                  ) : app.status === 'pending' ? (
+                                    <p className={styles.paymentStatus}>Aguardando confirmação do pagamento</p>
+                                  ) : null}
+                                </div>
+                                
+                                <div className={styles.cardFooterFuture}>
+                                  {(app.status === 'confirmed' || app.status === 'pending') &&
+                                    app.paymentStatus !== 'paid' &&
+                                    app.gatewayCheckoutUrl &&
+                                    (!app.paymentExpiresAt || new Date(app.paymentExpiresAt) > new Date()) && (
+                                      <a
+                                        href={app.gatewayCheckoutUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={styles.btnPayNow}
+                                      >
+                                        💳 Pagar agora
+                                      </a>
+                                    )}
+                                  {/* Mantemos apenas o botão de cancelamento via DELETE que limpa a tela e libera o horário */}
+                                  <button 
+                                    type="button" 
+                                    className={styles.btnCancel}
+                                    onClick={() => handleCancelarHorario(app._id)}
+                                  >
+                                    ❌ Cancelar Agendamento
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+
 
 
                 {/* SEÇÃO: HISTÓRICO PASSADO */}

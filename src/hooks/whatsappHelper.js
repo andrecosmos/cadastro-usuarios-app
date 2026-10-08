@@ -35,7 +35,7 @@ export function gerarLinkWhatsApp(agendamento, empresa, tipoFluxo = 'cliente') {
   if (tipoFluxo === 'admin') {
     // Texto que o Admin envia PARA o cliente
     texto = `Olá, ${nomeCliente || 'Cliente'}! 👋\n\n` +
-            `Seu agendamento na *${nomeEmpresa}* foi realizado com sucesso! 🎉\n\n` + 
+            `O agendamento na *${nomeEmpresa}* foi realizado com sucesso! 🎉\n\n` + 
             `💇‍♂️ *Serviço:* ${servico}\n` + 
             `👤 *Profissional:* ${profissional}\n` + 
             `📆 *Data:* ${dataFormatada}\n` + 
