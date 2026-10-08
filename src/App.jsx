@@ -30,7 +30,7 @@ export default function App() {
     location.state?.returnToBooking && signed ? 'formulario' : 'perfil'
   );
 
-  const [selectedService, setSelectedService] = useState('');
+  const [selectedServiceIds, setSelectedServiceIds] = useState([]);
   const [selectedStaff, setSelectedStaff] = useState('');
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   
@@ -48,6 +48,27 @@ const [submittingBooking, setSubmittingBooking] = useState(false);
 const checkoutReturnMessage = checkoutReturnMessages[
   new URLSearchParams(location.search).get('checkout_return')
 ] || '';
+const selectedServiceDetails = services.filter((service) =>
+  selectedServiceIds.includes(service._id)
+);
+const selectedServiceDuration = selectedServiceDetails.reduce(
+  (total, service) => total + Number(service.durationInMinutes || 0),
+  0
+);
+const selectedServiceTotal = selectedServiceDetails.reduce(
+  (total, service) => total + Number(service.price || 0),
+  0
+);
+
+function toggleServiceSelection(serviceId) {
+  setSelectedServiceIds((currentIds) =>
+    currentIds.includes(serviceId)
+      ? currentIds.filter((id) => id !== serviceId)
+      : [...currentIds, serviceId]
+  );
+  setSelectedSlot(null);
+  setAvailableSlots([]);
+}
 
 
 
@@ -125,9 +146,12 @@ const checkoutReturnMessage = checkoutReturnMessages[
 
   // 3. Busca horários livres dinamicamente
   useEffect(() => {
+    let active = true;
+
     async function loadSlots() {
-      if (!company?._id || !selectedStaff || !selectedService || !selectedDate) {
+      if (!company?._id || !selectedStaff || selectedServiceIds.length === 0 || !selectedDate) {
         setAvailableSlots([]);
+        setLoadingSlots(false);
         return;
       }
       
@@ -138,20 +162,25 @@ const checkoutReturnMessage = checkoutReturnMessages[
         const response = await appointmentService.getAvailableSlots(
           company._id,
           selectedStaff,
-          selectedService,
+          selectedServiceIds,
           selectedDate
         );
-        setAvailableSlots(response.availableSlots);
+        if (active) setAvailableSlots(response.availableSlots);
       } catch (err) {
-        setError(err.message || 'Erro ao carregar horários.');
-        setAvailableSlots([]);
+        if (active) {
+          setError(err.message || 'Erro ao carregar horários.');
+          setAvailableSlots([]);
+        }
       } finally {
-        setLoadingSlots(false);
+        if (active) setLoadingSlots(false);
       }
     }
 
     loadSlots();
-  }, [selectedDate, selectedStaff, selectedService, company]);
+    return () => {
+      active = false;
+    };
+  }, [selectedDate, selectedStaff, selectedServiceIds, company]);
 
     async function handleBookAppointment(dateTimeIso) {
       if (!signed) {
@@ -159,7 +188,7 @@ const checkoutReturnMessage = checkoutReturnMessages[
         navigate(`/${companySlug}/login`, { 
           state: { 
             returnToBooking: true,
-            selectedService,
+            selectedServices: selectedServiceIds,
             selectedStaff,
             selectedDate,
             selectedSlot: dateTimeIso
@@ -183,16 +212,16 @@ const checkoutReturnMessage = checkoutReturnMessages[
             companyId: company._id,
             customerId: user._id, 
             professionalId: selectedStaff,
-            serviceId: selectedService,
+            serviceIds: selectedServiceIds,
             startTime: dateTimeIso,
           });
 
           const dadosDoAgendamento = {
-            servico: services.find(s => s._id === selectedService)?.name || 'Serviço Selecionado',
+            servico: selectedServiceDetails.map((service) => service.name).join(', ') || 'Serviços Selecionados',
             profissional: staffList.find(st => st._id === selectedStaff)?.name || 'Profissional Selecionado',
             data: selectedDate,
             horario: formatBusinessTime(dateTimeIso),
-            duracao: services.find(s => s._id === selectedService)?.durationInMinutes || 30,
+            duracao: selectedServiceDuration,
             checkoutUrl: response.checkoutUrl
           };
 
@@ -218,7 +247,7 @@ const checkoutReturnMessage = checkoutReturnMessages[
 }
 
   function handleFinishBooking() {
-    setSelectedService('');
+    setSelectedServiceIds([]);
     setSelectedStaff('');
     setSelectedSlot(null);
     setConfirmedData(null);
@@ -229,11 +258,17 @@ const checkoutReturnMessage = checkoutReturnMessages[
   // 🌟 NOVO EFFECT: Escuta o retorno do login e reconstrói o formulário na hora
   useEffect(() => {
     // Se o state contiver o sinalizador de retorno e dados válidos de serviço:
-    if (location.state?.returnToBooking && location.state?.selectedService) {
+    if (
+      location.state?.returnToBooking &&
+      (location.state?.selectedServices?.length || location.state?.selectedService)
+    ) {
       console.log("🔄 Restaurando dados selecionados pós-login:", location.state);
       
       // Reinjeta os dados clicados de volta nos estados locais do React
-      setSelectedService(location.state.selectedService);
+      setSelectedServiceIds(
+        location.state.selectedServices ||
+        (location.state.selectedService ? [location.state.selectedService] : [])
+      );
       
       if (location.state.selectedStaff) setSelectedStaff(location.state.selectedStaff);
       if (location.state.selectedDate) setSelectedDate(location.state.selectedDate);
@@ -271,13 +306,15 @@ const checkoutReturnMessage = checkoutReturnMessages[
           </span>
           
           {/* 🌟 ATUALIZADO: Agora aponta para a rota global limpa */}
-          <button 
-            type="button" 
-            className={styles.historyNavButton}
-            onClick={() => navigate(`/${companySlug}/minha-conta`)}
-          >
-            📅 Minha Conta
-          </button>
+          {step !== 'perfil' && (
+            <button
+              type="button"
+              className={styles.historyNavButton}
+              onClick={() => navigate(`/${companySlug}/minha-conta`)}
+            >
+              📅 Minha Conta
+            </button>
+          )}
           
           <button type="button" className={styles.logoutButton} onClick={handleLogout}>
             Sair
@@ -299,9 +336,11 @@ const checkoutReturnMessage = checkoutReturnMessages[
         <PerfilEstabelecimento 
           company={company}
           services={services}
+          signed={signed}
+          companySlug={companySlug}
           onSelectService={(serviceId) => {
             // Guarda o serviço clicado direto do card
-            setSelectedService(serviceId);
+            setSelectedServiceIds([serviceId]);
             // Avança o usuário instantaneamente para o formulário de horários!
             setStep('formulario'); 
           }}
@@ -327,18 +366,23 @@ const checkoutReturnMessage = checkoutReturnMessages[
             {/* 1. SELEÇÃO DE SERVIÇO EM CARDS */}
             {/* 1. SELEÇÃO DE SERVIÇO EM CARDS */}
 <div className={styles.inputField}>
-  <label className={styles.fieldLabel}>1. Selecione o Serviço:</label>
+  <label className={styles.fieldLabel}>1. Selecione um ou mais serviços:</label>
   <div className={styles.servicesGridList}>
     {services.map(s => {
-      const isSelected = selectedService === s._id;
+      const isSelected = selectedServiceIds.includes(s._id);
       return (
         <div 
           key={s._id}
           className={`${styles.serviceSelectCard} ${isSelected ? styles.cardActive : ''}`}
-          onClick={() => {
-            setSelectedService(s._id);
-            setSelectedSlot(null); // Limpa o horário se mudar o serviço
-            setAvailableSlots([]);
+          role="checkbox"
+          aria-checked={isSelected}
+          tabIndex={0}
+          onClick={() => toggleServiceSelection(s._id)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              toggleServiceSelection(s._id);
+            }
           }}
         >
           {/* Nova miniatura da imagem se houver URL válida */}
@@ -357,8 +401,25 @@ const checkoutReturnMessage = checkoutReturnMessages[
           </div>
           <div className={styles.servicePriceRight}>
             {/* Correção de R\$ para o formato limpo com vírgula */}
-            <strong>R\$ {s.price.toFixed(2).replace('.', ',')}</strong>
+            <strong>R\$ {Number(s.price).toFixed(2).replace('.', ',')}</strong>
+            <span className={`${styles.serviceSelectionIndicator} ${isSelected ? styles.serviceSelectionIndicatorActive : ''}`}>
+              {isSelected ? '✓ Selecionado' : '+ Adicionar'}
+            </span>
           </div>
+          {selectedServiceDetails.length > 0 && (
+            <div className={styles.selectedServicesSummary} aria-live="polite">
+              <strong>
+                {selectedServiceDetails.length} serviço{selectedServiceDetails.length > 1 ? 's' : ''} selecionado{selectedServiceDetails.length > 1 ? 's' : ''}
+              </strong>
+              <span>Duração total: {selectedServiceDuration} min</span>
+              <span>
+                Total: R$ {selectedServiceTotal.toLocaleString('pt-BR', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}
+              </span>
+            </div>
+          )}
         </div>
       );
     })}
@@ -411,8 +472,8 @@ const checkoutReturnMessage = checkoutReturnMessages[
             <div className={styles.slotsDivider}>
               <h2 className={styles.slotsTitle}>Horários para {dateFormatted}:</h2>
               
-              {!selectedService || !selectedStaff ? (
-                <div className={styles.slotsEmptyState}>Selecione o serviço e o profissional acima para liberar os horários.</div>
+              {selectedServiceIds.length === 0 || !selectedStaff ? (
+                <div className={styles.slotsEmptyState}>Selecione ao menos um serviço e o profissional acima para liberar os horários.</div>
               ) : loadingSlots ? (
                 <div className={styles.slotsLoading}>Carregando horários vagos...</div>
               ) : availableSlots.length === 0 ? (
@@ -483,7 +544,7 @@ const checkoutReturnMessage = checkoutReturnMessages[
             {/* Bilhete/Resumo com os detalhes do agendamento */}
             <div className={styles.ticketContainer}>
               <div className={styles.ticketRow}>
-                <span>Serviço:</span>
+                <span>{selectedServiceDetails.length > 1 ? 'Serviços:' : 'Serviço:'}</span>
                 <strong>{confirmedData.servico}</strong>
               </div>
               <div className={styles.ticketRow}>

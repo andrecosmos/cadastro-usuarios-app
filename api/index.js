@@ -95,6 +95,17 @@ function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function normalizeServiceIds(serviceIds, serviceId) {
+  const requestedIds = serviceIds ?? serviceId;
+  const values = Array.isArray(requestedIds)
+    ? requestedIds
+    : typeof requestedIds === 'string'
+      ? requestedIds.split(',')
+      : [];
+
+  return values.map((id) => (typeof id === 'string' ? id.trim() : String(id)).toLowerCase());
+}
+
 function getBusinessDate(value) {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Sao_Paulo',
@@ -118,7 +129,7 @@ function getPublicAppUrl() {
   let appUrl;
   try {
     appUrl = new URL(configuredUrl);
-  } catch {
+  } catch { 
     throw new Error('PUBLIC_APP_URL inválida. Informe apenas a origem HTTPS pública, sem caminho.');
   }
   if (appUrl.protocol !== 'https:') {
@@ -375,6 +386,7 @@ app.get('/api/appointments/list', authenticate, requireAdmin, requireCompanyScop
         model: User // Força o Mongoose a ler a tabela unificada de 'usuarios'
       })
       .populate('serviceId')
+      .populate('serviceIds')
       .populate('professionalId')
       .lean();
 
@@ -396,29 +408,40 @@ app.get('/api/appointments/list', authenticate, requireAdmin, requireCompanyScop
 app.get('/api/appointments/available-slots', async (req, res) => {
   try {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    const { companyId, professionalId, serviceId, date } = req.query;
+    const { companyId, professionalId, serviceId, serviceIds, date } = req.query;
+    const requestedServiceIds = normalizeServiceIds(serviceIds, serviceId);
 
     if (
       !mongoose.isValidObjectId(companyId) ||
       !mongoose.isValidObjectId(professionalId) ||
-      !mongoose.isValidObjectId(serviceId) ||
+      !requestedServiceIds.length ||
+      requestedServiceIds.some((id) => !mongoose.isValidObjectId(id)) ||
+      new Set(requestedServiceIds).size !== requestedServiceIds.length ||
       !date
     ) {
-      return res.status(400).json({ error: 'Empresa, profissional, serviço e data válidos são obrigatórios.' });
+      return res.status(400).json({ error: 'Empresa, profissional, serviços e data válidos são obrigatórios.' });
     }
 
-    const [service, professional] = await Promise.all([
-      Service.findOne({ _id: serviceId, companyId, isActive: true }).lean(),
+    const [services, professional] = await Promise.all([
+      Service.find({ _id: { $in: requestedServiceIds }, companyId, isActive: true }).lean(),
       Staff.findOne({ _id: professionalId, companyId, isActive: true }).lean()
     ]);
 
-    if (!service || !professional) {
-      return res.status(404).json({ error: 'Serviço ou profissional não encontrado para esta empresa.' });
+    if (services.length !== requestedServiceIds.length || !professional) {
+      return res.status(404).json({ error: 'Um ou mais serviços ou o profissional não foram encontrados para esta empresa.' });
     }
 
-    const durationInMinutes = Number(service.durationInMinutes);
-    if (!Number.isFinite(durationInMinutes) || durationInMinutes <= 0) {
-      return res.status(400).json({ error: 'A duração do serviço é inválida.' });
+    const orderedServices = requestedServiceIds.map((id) =>
+      services.find((service) => String(service._id) === id)
+    );
+    const durationInMinutes = orderedServices.reduce(
+      (total, service) => total + Number(service.durationInMinutes),
+      0
+    );
+    if (!Number.isFinite(durationInMinutes) || orderedServices.some((service) =>
+      !Number.isFinite(Number(service.durationInMinutes)) || Number(service.durationInMinutes) <= 0
+    )) {
+      return res.status(400).json({ error: 'A duração de um ou mais serviços é inválida.' });
     }
 
     const { start, endExclusive } = getBusinessDayBounds(date);
@@ -467,13 +490,16 @@ app.get('/api/appointments/available-slots', async (req, res) => {
 //Rota de Criação de Agendamento
 app.post('/api/appointments/create', authenticate, requireCompanyScope, async (req, res) => {
   try {
-    const { companyId, customerId, professionalId, serviceId, startTime } = req.body;
+    const { companyId, customerId, professionalId, serviceId, serviceIds, startTime } = req.body;
+    const requestedServiceIds = normalizeServiceIds(serviceIds, serviceId);
 
     if (
       !mongoose.isValidObjectId(companyId) ||
       !mongoose.isValidObjectId(customerId) ||
       !mongoose.isValidObjectId(professionalId) ||
-      !mongoose.isValidObjectId(serviceId) ||
+      !requestedServiceIds.length ||
+      requestedServiceIds.some((id) => !mongoose.isValidObjectId(id)) ||
+      new Set(requestedServiceIds).size !== requestedServiceIds.length ||
       !startTime
     ) {
       return res.status(400).json({ error: 'Campos obrigatórios ausentes para o agendamento.' });
@@ -487,17 +513,17 @@ app.post('/api/appointments/create', authenticate, requireCompanyScope, async (r
       return res.status(403).json({ error: 'Clientes só podem criar agendamentos para si mesmos.' });
     }
 
-    const [customer, service, professional] = await Promise.all([
+    const [customer, services, professional] = await Promise.all([
       User.findOne({ _id: customerId, companyId, role: 'user' }).select('_id email nome').lean(),
-      Service.findOne({ _id: serviceId, companyId, isActive: true }).lean(),
+      Service.find({ _id: { $in: requestedServiceIds }, companyId, isActive: true }).lean(),
       Staff.findOne({ _id: professionalId, companyId, isActive: true }).select('_id').lean()
     ]);
 
     if (!customer) {
       return res.status(404).json({ error: 'Cliente não encontrado para esta empresa.' });
     }
-    if (!service) {
-      return res.status(404).json({ error: 'Serviço não encontrado ou inativo para esta empresa.' });
+    if (services.length !== requestedServiceIds.length) {
+      return res.status(404).json({ error: 'Um ou mais serviços não foram encontrados ou estão inativos para esta empresa.' });
     }
     if (!professional) {
       return res.status(404).json({ error: 'Profissional não encontrado ou inativo para esta empresa.' });
@@ -527,14 +553,29 @@ app.post('/api/appointments/create', authenticate, requireCompanyScope, async (r
       }
     }
 
+    const orderedServices = requestedServiceIds.map((id) =>
+      services.find((service) => String(service._id) === id)
+    );
     const start = new Date(startTime);
-    const durationInMinutes = Number(service.durationInMinutes);
-    const paymentAmount = Number(service.price);
+    const durationInMinutes = orderedServices.reduce(
+      (total, service) => total + Number(service.durationInMinutes),
+      0
+    );
+    const paymentAmount = orderedServices.reduce(
+      (total, service) => total + Math.round(Number(service.price) * 100),
+      0
+    ) / 100;
     if (
       Number.isNaN(start.getTime()) ||
       !Number.isFinite(durationInMinutes) ||
-      durationInMinutes <= 0 ||
-      (req.auth.role === 'user' && (!Number.isFinite(paymentAmount) || paymentAmount <= 0))
+      orderedServices.some((service) =>
+        !Number.isFinite(Number(service.durationInMinutes)) || Number(service.durationInMinutes) <= 0
+      ) ||
+      (req.auth.role === 'user' && (
+        !Number.isFinite(paymentAmount) ||
+        paymentAmount <= 0 ||
+        orderedServices.some((service) => !Number.isFinite(Number(service.price)) || Number(service.price) <= 0)
+      ))
     ) {
       return res.status(400).json({ error: 'Data, horário, duração ou preço do serviço inválidos.' });
     }
@@ -600,7 +641,8 @@ app.post('/api/appointments/create', authenticate, requireCompanyScope, async (r
           companyId,
           customerId,
           professionalId,
-          serviceId,
+          serviceId: orderedServices[0]._id,
+          serviceIds: orderedServices.map((service) => service._id),
           startTime: start,
           endTime: end,
           status: req.auth.role === 'user' ? 'confirmed' : 'pending',
@@ -635,13 +677,13 @@ app.post('/api/appointments/create', authenticate, requireCompanyScope, async (r
         }));
         const preferenceResponse = await preference.create({
           body: {
-            items: [{
+            items: orderedServices.map((service) => ({
               id: String(service._id),
               title: `${service.name} - ${checkoutConfiguration.companyName}`,
               quantity: 1,
-              unit_price: paymentAmount,
+              unit_price: Number(service.price),
               currency_id: 'BRL'
-            }],
+            })),
             payer: customer.email ? { email: customer.email } : undefined,
             external_reference: String(newAppointment._id),
             metadata: {
@@ -1145,6 +1187,7 @@ app.get('/api/cliente/meus-agendamentos', authenticate, requireCustomer, async (
     const agendamentos = await Appointment.find({ customerId: customerObjectId })
       .populate({ path: 'companyId', select: 'name slug phone logo', options: { strictPopulate: false } })
       .populate({ path: 'serviceId', select: 'name price durationInMinutes', options: { strictPopulate: false } })
+      .populate({ path: 'serviceIds', select: 'name price durationInMinutes', options: { strictPopulate: false } })
       .populate({ path: 'professionalId', select: 'name', options: { strictPopulate: false } })
       .lean();
 

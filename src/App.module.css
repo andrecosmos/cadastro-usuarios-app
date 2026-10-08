@@ -660,6 +660,23 @@
   background-color: #f8fafc;
 }
 
+.serviceSelectCard:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.35);
+  outline-offset: 2px;
+}
+
+.selectedServicesSummary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background-color: #eff6ff;
+  color: #1e3a8a;
+  font-size: 13px;
+}
+
 .serviceInfoLeft h3 {
   font-size: 16px;
   font-weight: 700;
@@ -676,6 +693,19 @@
   font-size: 16px;
   color: #10b981; /* Verde para destacar preço */
   font-weight: 700;
+}
+
+.serviceSelectionIndicator {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 12px;
+  text-align: right;
+}
+
+.serviceSelectionIndicatorActive {
+  color: #1d4ed8;
+  font-weight: 600;
 }
 
 /* --- GRID DE PROFISSIONAIS --- */

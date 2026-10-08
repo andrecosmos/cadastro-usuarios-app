@@ -18,6 +18,7 @@ export default function AppointmentCard({
         endTime,
         customerId,
         serviceId,
+        serviceIds,
         professionalId,
         status,
         paymentStatus,
@@ -27,6 +28,9 @@ export default function AppointmentCard({
         paymentAmount
     } = appointment;
     const amountToReceive = Number(paymentAmount ?? serviceId?.price ?? 0);
+    const serviceNames = serviceIds?.length
+        ? serviceIds.map((service) => service?.name).filter(Boolean).join(', ')
+        : serviceId?.name;
 
     async function handleRegisterPayment(event) {
         event.preventDefault();
@@ -111,7 +115,7 @@ export default function AppointmentCard({
                     {/* Serviço e profissional */}
                     <div className={styles.tagsContainer}>
                         <span className={styles.tagService}>
-                            🛠️ {serviceId?.name || 'Serviço'}
+                            🛠️ {serviceNames || 'Serviço'}
                         </span>
                         <span className={styles.tagProfessional}>
                             👤 Profissional: {professionalId?.name || 'Não informado'}

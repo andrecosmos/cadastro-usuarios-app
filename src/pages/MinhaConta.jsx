@@ -187,7 +187,9 @@ async function handleCancelarHorario(appointmentId) {
                         ) : (
                           proximosAgendamentos.map(app => {
                             const nomeEmpresa = app.companyId?.name || app.company?.name || 'Estabelecimento';
-                            const nomeServico = app.serviceId?.name || app.service?.name || 'Serviço Personalizado';
+                            const nomeServico = app.serviceIds?.length
+                              ? app.serviceIds.map((service) => service?.name).filter(Boolean).join(', ')
+                              : app.serviceId?.name || app.service?.name || 'Serviço Personalizado';
                             const nomeProfissional = app.professionalId?.name || app.professional?.name || 'Profissional do Local';
                             
                             const precoOriginal = app.paymentAmount ?? app.serviceId?.price ?? app.service?.price ?? 0;
@@ -281,7 +283,9 @@ async function handleCancelarHorario(appointmentId) {
                           </div>
                         </div>
                         <div className={styles.cardBody}>
-                          <h3>{app.serviceId?.name || 'Serviço'}</h3>
+                          <h3>{app.serviceIds?.length
+                            ? app.serviceIds.map((service) => service?.name).filter(Boolean).join(', ')
+                            : app.serviceId?.name || 'Serviço'}</h3>
                           <p>Profissional: {app.professionalId?.name || 'Não informado'}</p>
                         </div>
                         <div className={styles.cardFooterPast}>

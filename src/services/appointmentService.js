@@ -36,8 +36,16 @@ export const appointmentService = {
   // ==========================================
   searchCustomers: (companyId, query = '') =>
     api.get('/api/customers/search', { params: { companyId, q: query } }),
-  getAvailableSlots: (companyId, professionalId, serviceId, date) => 
-    api.get('/api/appointments/available-slots', { params: { companyId, professionalId, serviceId, date } }),
+  getAvailableSlots: (companyId, professionalId, serviceIds, date) =>
+    api.get('/api/appointments/available-slots', {
+      params: {
+        companyId,
+        professionalId,
+        serviceIds: Array.isArray(serviceIds) ? serviceIds.join(',') : undefined,
+        serviceId: Array.isArray(serviceIds) ? undefined : serviceIds,
+        date
+      }
+    }),
   getAppointments: (companyId) => api.get('/api/appointments', { params: { companyId } }),
   createAppointment: (appointmentData) => api.post('/api/appointments/create', appointmentData),
   listAppointments: (companyId, date) => api.get('/api/appointments/list', { params: { companyId, date } }),

@@ -1,9 +1,18 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './PerfilEstabelecimento.module.css';
 
-export default function PerfilEstabelecimento({ company, services, onSelectService }) {
+export default function PerfilEstabelecimento({
+  company,
+  services,
+  onSelectService,
+  signed,
+  companySlug
+}) {
   const navigate = useNavigate();
+
+  function handleAccountAccess() {
+    navigate(signed ? `/${companySlug}/minha-conta` : `/${companySlug}/login`);
+  }
 
   return (
     <div className={styles.profileWrapper}>
@@ -41,6 +50,24 @@ export default function PerfilEstabelecimento({ company, services, onSelectServi
         </div>
       </div>
 
+      <section className={styles.accountAccess} aria-label="Acesso à conta">
+        <div className={styles.accountAccessCopy}>
+          <strong>{signed ? 'Acompanhe seus agendamentos' : 'Já tem uma conta?'}</strong>
+          <span>
+            {signed
+              ? 'Consulte seus horários e pagamentos.'
+              : 'Entre para consultar seus horários ou continuar.'}
+          </span>
+        </div>
+        <button
+          type="button"
+          className={styles.accountAccessButton}
+          onClick={handleAccountAccess}
+        >
+          {signed ? 'Minha conta' : 'Entrar'}
+        </button>
+      </section>
+
       {/* 📋 LISTA DE ATENDIMENTOS: Renderiza os serviços direto */}
       <div className={styles.servicesSection}>
         <h2 className={styles.sectionTitle}>Serviços Disponíveis</h2>
@@ -59,7 +86,6 @@ export default function PerfilEstabelecimento({ company, services, onSelectServi
                       src={service.imageUrl} 
                       alt={service.name} 
                       className={styles.serviceItemImage}
-                      style={{ width: '80px', height: '80px', borderRadius: '8px', objectFit: 'cover', marginRight: '15px' }}
                     />
                   </div>
                 )}

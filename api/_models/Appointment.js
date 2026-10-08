@@ -5,6 +5,7 @@ const AppointmentSchema = new mongoose.Schema({
   customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
   professionalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff', required: true },
   serviceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Service', required: true },
+  serviceIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Service' }],
   
   startTime: { type: Date, required: true }, // ex: 2026-09-10T14:00:00.000Z
   endTime: { type: Date, required: true },   // Calculado na API (startTime + Service.durationInMinutes)
